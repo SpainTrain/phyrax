@@ -109,6 +109,7 @@ uv run mypy src/phyrax/
 
 ### Style
 
+- Use Conventional Commits for all commit messages (e.g., `feat:`, `fix:`, `docs:`, `refactor:`).
 - Use `ruff` for linting and formatting. Config is in `pyproject.toml`.
 - Type hints on all public function signatures. Use `str | None` syntax (not `Optional`).
 - Dataclasses for simple data containers. Pydantic models only for config (things that serialize to/from JSON).
