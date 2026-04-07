@@ -1,0 +1,49 @@
+[project]
+name = "phyrax"
+version = "0.1.0"
+description = "A hyper-optimized, AI-assisted CLI email workflow focused on bundling, task management, and speed."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "textual>=1.0",
+    "typer>=0.12",
+    "notmuch2>=0.3",
+    "pydantic>=2.0",
+    "platformdirs>=4.0",
+]
+
+[project.scripts]
+phr = "phyrax.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phyrax"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+explicit_package_bases = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
