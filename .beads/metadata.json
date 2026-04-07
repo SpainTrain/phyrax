@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "phyrax",
+  "project_id": "a271a380-559e-42dc-903b-edb12638a779"
+}
