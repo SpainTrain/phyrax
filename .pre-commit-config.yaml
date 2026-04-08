@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.20.0
+    hooks:
+      - id: mypy
+        args: [--explicit-package-bases]
+        additional_dependencies:
+          - pydantic>=2.0
+          - platformdirs>=4.0
+          - typer>=0.12
+          - textual>=1.0
+          - html2text>=2020.1.16
+        pass_filenames: false
+        files: ^src/phyrax/
