@@ -7,23 +7,78 @@ side-effect-free — all mutations (tagging, config writes) are handled by calle
 
 from __future__ import annotations
 
+import re
 
-def sort_bundles(config: object) -> list[object]:
+from phyrax.config import Bundle, BundleRule, PhyraxConfig
+from phyrax.database import Database
+
+
+def sort_bundles(config: PhyraxConfig) -> list[Bundle]:
     """Return bundles sorted ascending by priority (stable, 0 = highest)."""
-    raise NotImplementedError
+    return sorted(config.bundles, key=lambda b: b.priority)
+
+
+def _get_field_value(thread_headers: dict[str, str], field: str) -> str:
+    """Extract the header value for a given field name.
+
+    Supports named fields (from, to, subject) and the generic
+    ``header:<Name>`` syntax for arbitrary headers.
+    """
+    _named: dict[str, str] = {
+        "from": "From",
+        "to": "To",
+        "subject": "Subject",
+    }
+    if field in _named:
+        return thread_headers.get(_named[field], "")
+    if field.startswith("header:"):
+        header_name = field[len("header:"):]
+        return thread_headers.get(header_name, "")
+    # Unknown field — treat as absent.
+    return ""
+
+
+def _rule_matches(rule: BundleRule, thread_headers: dict[str, str]) -> bool:
+    """Return True if *rule* matches the given thread headers."""
+    field_value = _get_field_value(thread_headers, rule.field)
+
+    if rule.operator == "exists":
+        return bool(field_value)
+
+    # All remaining operators require a non-None value (enforced by BundleRule).
+    assert rule.value is not None
+    value = rule.value
+
+    if rule.operator == "contains":
+        return value.lower() in field_value.lower()
+    if rule.operator == "equals":
+        return field_value.lower() == value.lower()
+    if rule.operator == "matches":
+        return bool(re.search(value, field_value, re.IGNORECASE))
+
+    # Unreachable — Literal type prevents unknown operators.
+    return False  # pragma: no cover
 
 
 def match_thread_to_bundle(
     thread_headers: dict[str, str],
-    bundles: list[object],
-) -> object | None:
-    """Evaluate priority-sorted bundles and return the first match, or None."""
-    raise NotImplementedError
+    bundles: list[Bundle],
+) -> Bundle | None:
+    """Evaluate priority-sorted bundles and return the first match, or None.
+
+    ``bundles`` must already be sorted ascending by priority (caller's
+    responsibility — use :func:`sort_bundles`).  Within each bundle the rules
+    are OR-combined: the bundle matches if *any* rule matches.
+    """
+    for bundle in bundles:
+        if any(_rule_matches(rule, thread_headers) for rule in bundle.rules):
+            return bundle
+    return None
 
 
-def apply_bundle_tags(db: object, thread_id: str, bundle: object) -> None:
+def apply_bundle_tags(db: Database, thread_id: str, bundle: Bundle) -> None:
     """Add the bundle's label tag to every message in the thread (idempotent)."""
-    raise NotImplementedError
+    db.add_tags(thread_id, [bundle.label])
 
 
 def generate_bundle_rule(
