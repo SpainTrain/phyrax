@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
+from tests.fixtures.maildir_builder import MaildirFixture
 
 
-def test_placeholder(tmp_maildir: Path) -> None:
+def test_placeholder(tmp_maildir: MaildirFixture) -> None:
     """Placeholder — implement in E2-2 (phyrax-lwb.2)."""
     assert True

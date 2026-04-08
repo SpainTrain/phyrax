@@ -2,19 +2,20 @@
 
 Three core fixtures:
 - tmp_config_dir: XDG-like temp dir tree with a minimal valid config.json
-- tmp_maildir: placeholder Maildir root (full generator is E2-3)
+- tmp_maildir: synthetic Maildir with 5 threads / 20 messages, notmuch-indexed
 - mock_agent_command: path to a shell script that echoes its stdin back
 """
 
 from __future__ import annotations
 
 import json
-import os
 import stat
 import textwrap
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.maildir_builder import MaildirFixture, build_maildir
 
 
 @pytest.fixture()
@@ -49,16 +50,19 @@ def tmp_config_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def tmp_maildir(tmp_path: Path) -> Path:
-    """Return an empty Maildir root.
+def tmp_maildir(tmp_path: Path) -> MaildirFixture:
+    """Return a synthetic Maildir fixture with 5 threads / 20 messages.
 
-    Full synthetic message generation is implemented in E2-3 (phyrax-lwb.3).
-    This fixture is a placeholder so test modules can reference it now.
+    Builds the Maildir under *tmp_path*, runs ``notmuch new`` to index
+    it, and applies bundle tags (+alerts, +newsletters).  Returns a
+    :class:`~tests.fixtures.maildir_builder.MaildirFixture` namedtuple
+    containing:
+
+    - ``maildir``       — Path to the Maildir root (``cur/``, ``new/``, ``tmp/``)
+    - ``notmuch_config``— Path to the minimal notmuch config file
+    - ``thread_ids``    — dict mapping label → notmuch thread ID
     """
-    maildir = tmp_path / "mail"
-    for sub in ("cur", "new", "tmp"):
-        (maildir / sub).mkdir(parents=True)
-    return maildir
+    return build_maildir(tmp_path)
 
 
 @pytest.fixture()
