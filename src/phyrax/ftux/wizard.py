@@ -9,12 +9,35 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass, field
+from typing import Any
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
 from textual.widgets import Button, Input, Label, ListItem, ListView
 
 from phyrax.config import AIConfig
+
+# ---------------------------------------------------------------------------
+# First-run preamble for ChatScreen handoff
+# ---------------------------------------------------------------------------
+
+FIRST_RUN_PREAMBLE: str = """\
+Welcome to Phyrax! This is your first run. I'll help you finish setting up.
+
+We need to configure a few things:
+
+1. **Identity** — Set your primary email address and any aliases you send from.
+   Run `phr compose` to draft your first email once identity is configured.
+
+2. **Bundles** — Define at least one bundle to organise your inbox by topic,
+   sender, or label. Bundles are the core of Phyrax's triage workflow.
+   Use `phr list --bundle=<name>` to preview threads in each bundle.
+
+3. **Task action** — Copy a task template from docs/actions/ into your personal
+   actions directory so the `t` key can extract tasks from email threads.
+
+Let's start with your identity. What email address do you send from?
+"""
 
 # ---------------------------------------------------------------------------
 # Preset definitions
@@ -195,11 +218,13 @@ def run_bootstrap_wizard() -> AIConfig:
     return AIConfig(agent_command=result.command)
 
 
-def run_post_bootstrap_handoff(app: object) -> None:
+def run_post_bootstrap_handoff(app: App[Any]) -> None:
     """Push ChatScreen with a seeded preamble for first-run configuration.
 
     The preamble instructs the agent to collect identity.primary, aliases,
     at least one bundle, and copy a task template from docs/actions/ to ACTIONS_DIR.
     Only fires when config.is_first_run was True at app mount.
     """
-    raise NotImplementedError
+    from phyrax.tui.screens.chat import ChatScreen
+
+    app.push_screen(ChatScreen(preamble=FIRST_RUN_PREAMBLE))
