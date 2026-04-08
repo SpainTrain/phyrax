@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import typer
 
+from phyrax.app import run_app
+
 app = typer.Typer(
     name="phr",
     help="Phyrax: a keyboard-first, AI-assisted terminal email client.",
@@ -15,4 +17,4 @@ app = typer.Typer(
 def main(ctx: typer.Context) -> None:
     """Launch the Phyrax TUI, or run a headless subcommand."""
     if ctx.invoked_subcommand is None:
-        raise NotImplementedError("TUI not yet implemented — see E4")
+        run_app()
