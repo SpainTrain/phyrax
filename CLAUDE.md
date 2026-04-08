@@ -6,6 +6,19 @@ This file provides instructions and context for AI coding agents working on this
 
 Phyrax (`phr`) is a keyboard-first terminal email client that syncs Gmail via `lieer`, indexes with `notmuch`, and orchestrates AI agents for drafting, triaging, and task extraction. See `ARCHITECTURE.md` for full technical spec.
 
+## Agent Rules
+
+The `.claude/rules/` directory contains topic-specific, actionable rules for all agents working on this project. When implementing a feature, read the relevant rule file before writing code.
+
+| File | Covers |
+|---|---|
+| `.claude/rules/general.md` | Ruff/mypy enforcement, type hints, imports, exception handling, logging, commit style, config atomicity |
+| `.claude/rules/database.md` | notmuch sole-importer constraint, tag mutation safety, test fixture setup, snippet formatting |
+| `.claude/rules/tui.md` | Subprocess suspension before $EDITOR/agent, keybinding config sourcing, Textual pilot tests, network isolation |
+| `.claude/rules/config.md` | Sole write path via `PhyraxConfig.save()`, `is_first_run` semantics, platformdirs usage, validation error handling |
+
+**When implementing a new epic**, add topic rules to `.claude/rules/` for patterns discovered during implementation. Rules must be actionable (what to do or not do) — not aspirational. Avoid "prefer X" or "consider Y"; write "always X" or "never Y".
+
 ## Tech Stack
 
 - **Python ≥ 3.12**, packaged with **uv**
