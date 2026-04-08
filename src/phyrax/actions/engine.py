@@ -16,7 +16,9 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from phyrax.config import ACTIONS_DIR
+from phyrax import agent as _agent
+from phyrax.config import ACTIONS_DIR, PhyraxConfig
+from phyrax.models import MessageDetail
 
 _log = logging.getLogger("phyrax")
 
@@ -171,15 +173,37 @@ def list_actions(actions_dir: Path | None = None) -> list[ActionTemplate]:
 
 def execute_action(
     template: ActionTemplate,
-    message: object,
-    config: object,
-) -> None:
-    """Compile a prompt and run the agent interactively.
+    message: MessageDetail,
+    config: PhyraxConfig,
+) -> int:
+    """Compile a prompt from *template* and run the agent interactively.
 
     The caller is responsible for suspending the TUI via App.suspend() before
     calling this function.
 
+    Args:
+        template: The parsed action template to execute.
+        message: The currently selected message to pass as email payload.
+        config: The loaded PhyraxConfig (provides ai.agent_command etc.).
+
+    Returns:
+        The agent's exit code (0 on success).
+
     Raises:
-        NotImplementedError: This stub will be implemented in E8-2.
+        AgentError: If the agent subprocess fails.
     """
-    raise NotImplementedError
+    prompt_path = _agent.compile_prompt(
+        template.prompt_body,
+        message,
+        require_full_context=template.require_full_context,
+        allow_attachments=template.allow_attachments,
+    )
+    try:
+        exit_code = _agent.run_agent_interactive(
+            config.ai.agent_command,
+            prompt_path,
+            fallback_command=config.ai.fallback_command,
+        )
+    finally:
+        prompt_path.unlink(missing_ok=True)
+    return exit_code
