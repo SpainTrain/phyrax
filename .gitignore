@@ -11,6 +11,7 @@ uv.lock
 
 # Claude Code local settings (personal feature flags, not team config)
 .claude/settings.local.json
+.claude/worktrees
 
 # Phyrax runtime
 *.log
