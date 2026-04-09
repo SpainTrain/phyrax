@@ -37,15 +37,11 @@ def status() -> None:
             for bundle in config.bundles:
                 count = db.count_threads(f"tag:{bundle.label}")
                 unread = db.count_threads(f"tag:{bundle.label} tag:unread")
-                bundle_entries.append(
-                    {"name": bundle.name, "count": count, "unread": unread}
-                )
+                bundle_entries.append({"name": bundle.name, "count": count, "unread": unread})
 
             if config.bundles:
                 not_clause = " OR ".join(f"tag:{b.label}" for b in config.bundles)
-                unbundled = db.count_threads(
-                    f"tag:inbox AND NOT ({not_clause})"
-                )
+                unbundled = db.count_threads(f"tag:inbox AND NOT ({not_clause})")
             else:
                 unbundled = inbox_total
 
@@ -64,6 +60,53 @@ def status() -> None:
             "drafts_pending": drafts_pending,
         }
         typer.echo(json.dumps(result, indent=2))
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+
+@app.command(name="list")
+def list_threads(
+    bundle: str | None = typer.Option(None, "--bundle", help="Filter by bundle name"),
+    query: str | None = typer.Option(None, "--query", help="Raw notmuch query"),
+) -> None:
+    """List threads as a JSON array."""
+    import json
+
+    try:
+        config = PhyraxConfig.load()
+
+        # Build query string
+        if query is not None:
+            notmuch_query = query
+        elif bundle is not None:
+            # Resolve bundle name to label
+            matched = next((b for b in config.bundles if b.name == bundle), None)
+            if matched is None:
+                typer.echo(f"Error: bundle {bundle!r} not found in config", err=True)
+                raise typer.Exit(1)
+            notmuch_query = f"tag:{matched.label}"
+        else:
+            notmuch_query = "tag:inbox"
+
+        with Database() as db:
+            threads = db.query_threads(notmuch_query, limit=500)
+
+        result = [
+            {
+                "thread_id": t.thread_id,
+                "subject": t.subject,
+                "authors": t.authors,
+                "date_unix": t.newest_date,
+                "tags": sorted(t.tags),
+                "snippet": t.snippet,
+                "gmail_thread_id": t.gmail_thread_id,
+            }
+            for t in threads
+        ]
+        typer.echo(json.dumps(result, indent=2))
+    except typer.Exit:
+        raise
     except Exception as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1) from exc
