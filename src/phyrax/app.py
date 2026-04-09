@@ -28,9 +28,7 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
     """Phyrax TUI application."""
 
     CSS_PATH = None  # styled programmatically
-    SCREENS: ClassVar[dict[str, Callable[[], Screen[Any]]]] = {
-        "inbox": InboxScreen,
-    }
+    SCREENS: ClassVar[dict[str, Callable[[], Screen[Any]]]] = {}
 
     def compose(self) -> ComposeResult:
         # App.compose() must yield something; InboxScreen is pushed in on_mount.
@@ -62,7 +60,7 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
                 run_post_bootstrap_handoff(self)
 
         # 5. Push InboxScreen.
-        self.push_screen(InboxScreen())
+        self.push_screen(InboxScreen(self._db, config))
 
     def on_unmount(self) -> None:
         """Clean up lockfile and database on exit."""
