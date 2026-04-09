@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
+import os
+from collections.abc import Generator
+from typing import Annotated
+
 import typer
 
 from phyrax.app import run_app
@@ -13,6 +18,22 @@ app = typer.Typer(
     help="Phyrax: a keyboard-first, AI-assisted terminal email client.",
     no_args_is_help=False,
 )
+
+
+@contextlib.contextmanager
+def _write_lock() -> Generator[None, None, None]:
+    """Acquire the PID lockfile or exit 2 if TUI is running."""
+    from phyrax.config import LOCKFILE
+
+    if LOCKFILE.exists():
+        typer.echo("phr TUI is running; commands disabled", err=True)
+        raise typer.Exit(2)
+    LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
+    LOCKFILE.write_text(str(os.getpid()), encoding="utf-8")
+    try:
+        yield
+    finally:
+        LOCKFILE.unlink(missing_ok=True)
 
 
 @app.callback(invoke_without_command=True)
@@ -110,3 +131,41 @@ def list_threads(
     except Exception as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1) from exc
+
+
+@app.command()
+def archive(thread_id: Annotated[str, typer.Argument(help="Thread ID to archive")]) -> None:
+    """Remove inbox tag from a thread."""
+    import json
+
+    with _write_lock():
+        with Database() as db:
+            db.remove_tags(thread_id, ["inbox"])
+            threads = db.query_threads(f"thread:{thread_id}", limit=1)
+            tags = sorted(threads[0].tags) if threads else []
+        typer.echo(json.dumps({"status": "ok", "thread_id": thread_id, "tags": tags}, indent=2))
+
+
+@app.command(name="tag")
+def tag_thread(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID to modify tags on")],
+    changes: Annotated[list[str], typer.Argument(help="+add -remove tag changes")],
+) -> None:
+    """Add or remove tags on a thread. Prefix tags with + or -."""
+    import json
+
+    adds = [t[1:] for t in changes if t.startswith("+")]
+    removes = [t[1:] for t in changes if t.startswith("-")]
+    invalid = [t for t in changes if not t.startswith(("+", "-"))]
+    if invalid:
+        typer.echo(f"Error: tags must start with + or -: {invalid}", err=True)
+        raise typer.Exit(1)
+    with _write_lock():
+        with Database() as db:
+            if adds:
+                db.add_tags(thread_id, adds)
+            if removes:
+                db.remove_tags(thread_id, removes)
+            threads = db.query_threads(f"thread:{thread_id}", limit=1)
+            tags = sorted(threads[0].tags) if threads else []
+        typer.echo(json.dumps({"status": "ok", "thread_id": thread_id, "tags": tags}, indent=2))
