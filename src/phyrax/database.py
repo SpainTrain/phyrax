@@ -214,7 +214,7 @@ class Database:
 
             # Collect all messages to find newest for snippet/attachment/gmail id
             try:
-                all_messages = list(thread.messages())
+                all_messages = list(thread)
             except Exception:
                 all_messages = []
 
@@ -226,11 +226,11 @@ class Database:
 
             try:
                 authors_raw: str = thread.authors
-                newest_date: int = int(thread.newest_message_date.timestamp())
+                newest_date: int = int(thread.last)
                 tags: frozenset[str] = frozenset(thread.tags)
                 subject: str = thread.subject
                 thread_id: str = thread.threadid
-                message_count: int = thread.total_messages
+                message_count: int = len(thread)
             except Exception as exc:
                 log.warning("Skipping malformed thread: %s", exc)
                 continue
@@ -291,7 +291,7 @@ class Database:
 
         thread = threads[0]
         try:
-            nm_messages = list(thread.messages())
+            nm_messages = list(thread)
         except Exception as exc:
             raise DatabaseError(
                 f"Could not iterate messages in thread {thread_id!r}: {exc}"
@@ -423,7 +423,7 @@ class Database:
         if not threads:
             return []
         try:
-            return list(threads[0].messages())
+            return list(threads[0])
         except Exception as exc:
             raise DatabaseError(
                 f"Could not iterate messages in thread {thread_id!r}: {exc}"

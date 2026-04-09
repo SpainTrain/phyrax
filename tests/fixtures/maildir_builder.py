@@ -172,9 +172,14 @@ def _get_thread_id(notmuch_config: Path, message_id: str) -> str:
 
 
 def _apply_tag(notmuch_config: Path, thread_id: str, tag_expr: str) -> None:
-    """Apply a tag expression (e.g. ``+alerts``) to *thread_id*."""
+    """Apply a tag expression (e.g. ``+alerts``) to *thread_id*.
+
+    *thread_id* may be a bare hex ID or the full ``thread:XXXX`` string
+    returned by ``notmuch search --output=threads``.
+    """
+    bare_id = thread_id.removeprefix("thread:")
     _run(
-        ["notmuch", "tag", tag_expr, f"thread:{thread_id}"],
+        ["notmuch", "tag", tag_expr, f"thread:{bare_id}"],
         config=notmuch_config,
     )
 
