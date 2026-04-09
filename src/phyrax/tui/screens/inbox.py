@@ -15,10 +15,12 @@ from textual.binding import Binding, BindingType
 from textual.screen import Screen
 
 from phyrax.actions.builtins import run_task_action
+from phyrax.bundler import generate_bundle_rule
 from phyrax.config import PhyraxConfig
 from phyrax.database import Database
 from phyrax.tui.widgets.action_menu import run_action_for_thread
 from phyrax.tui.widgets.command_palette import CommandPalette
+from phyrax.tui.widgets.feedback_modal import FeedbackModal
 from phyrax.tui.widgets.status_bar import StatusBar
 from phyrax.tui.widgets.thread_list import (
     BundleHeaderRow,
@@ -151,9 +153,46 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
         except Exception as exc:
             log.warning("action_select: %s", exc)
 
-    def action_feedback(self) -> None:
-        """Stub: feedback flow is implemented in E3-3."""
-        self.notify("Feedback flow not yet implemented (E3-3)")
+    async def action_feedback(self) -> None:
+        """Show FeedbackModal, call AI agent to propose a BundleRule, and log it."""
+        row = self._get_selected_row()
+        if not isinstance(row, ThreadRow):
+            self.notify("Select a thread first")
+            return
+
+        # 1. Get user description via modal.
+        description: str | None = await self.app.push_screen_wait(FeedbackModal(row.thread.subject))
+        if not description:
+            return
+
+        # 2. Get the newest message in the thread for context.
+        messages = self._db.get_thread_messages(row.thread.thread_id)
+        if not messages:
+            self.notify("Thread has no messages")
+            return
+        newest = messages[-1]
+
+        # 3. Run agent (captured mode — no terminal handoff needed).
+        try:
+            rule = generate_bundle_rule(newest, description, self._config)
+        except Exception as exc:
+            log.error("action_feedback: generate_bundle_rule failed: %s", exc)
+            self.notify(f"Agent error: {exc}", severity="error")
+            return
+
+        # 4. Notify the user of the proposed rule.
+        # Full confirmation and config-write flow is wired in E3-4.
+        value_display = rule.value if rule.value is not None else "(exists)"
+        log.info(
+            "action_feedback: proposed rule: field=%r operator=%r value=%r",
+            rule.field,
+            rule.operator,
+            rule.value,
+        )
+        self.notify(
+            f"Proposed rule: {rule.field} {rule.operator} {value_display}"
+            " \u2014 add it? (y/n not wired)"
+        )
 
     def action_task_action(self) -> None:
         """Run the task action for the currently selected thread."""

@@ -7,10 +7,13 @@ side-effect-free — all mutations (tagging, config writes) are handled by calle
 
 from __future__ import annotations
 
+import json
 import re
 
 from phyrax.config import Bundle, BundleRule, PhyraxConfig
 from phyrax.database import Database
+from phyrax.exceptions import AgentError
+from phyrax.models import MessageDetail
 
 
 def sort_bundles(config: PhyraxConfig) -> list[Bundle]:
@@ -32,7 +35,7 @@ def _get_field_value(thread_headers: dict[str, str], field: str) -> str:
     if field in _named:
         return thread_headers.get(_named[field], "")
     if field.startswith("header:"):
-        header_name = field[len("header:"):]
+        header_name = field[len("header:") :]
         return thread_headers.get(header_name, "")
     # Unknown field — treat as absent.
     return ""
@@ -82,13 +85,39 @@ def apply_bundle_tags(db: Database, thread_id: str, bundle: Bundle) -> None:
 
 
 def generate_bundle_rule(
-    message: object,
+    message: MessageDetail,
     user_description: str,
-    config: object,
-) -> object:
+    config: PhyraxConfig,
+) -> BundleRule:
     """Call the AI agent in captured mode to propose a BundleRule.
+
+    Sends the email payload and the user's description to the AI agent and
+    parses the JSON response into a :class:`~phyrax.config.BundleRule`.
 
     Raises:
         AgentError: If the agent output cannot be parsed as a BundleRule.
     """
-    raise NotImplementedError
+    from phyrax.agent import RunMode, compile_prompt, run_agent
+
+    system_prompt = (
+        f"The user says: {user_description}\n\n"
+        "Analyze the email and propose a BundleRule as JSON:\n"
+        '{"field": "from|to|subject|header:<Name>", '
+        '"operator": "contains|equals|matches|exists", "value": "..."}\n\n'
+        "For the 'exists' operator, omit \"value\".\n"
+        "Respond with ONLY the JSON object, no explanation."
+    )
+
+    prompt_path = compile_prompt(system_prompt, message)
+    try:
+        result = run_agent(config.ai.agent_command, prompt_path, mode=RunMode.CAPTURED)
+    finally:
+        prompt_path.unlink(missing_ok=True)
+
+    try:
+        data = json.loads(result.stdout.strip())
+        return BundleRule(**data)
+    except Exception as exc:
+        raise AgentError(
+            f"Could not parse bundle rule from agent output: {result.stdout!r}"
+        ) from exc
