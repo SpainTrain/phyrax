@@ -20,7 +20,10 @@ from phyrax.tui.widgets.status_bar import StatusBar
 class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generic at runtime but unparameterized here
     """Main inbox screen — placeholder shell for E4-2 virtualized thread list."""
 
-    BINDINGS: ClassVar[list[BindingType]] = [Binding("q", "quit", "Quit")]
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("q", "quit", "Quit"),
+        Binding("t", "task_action", "Task", show=False),
+    ]
 
     def compose(self) -> ComposeResult:
         yield Label("Loading threads…")
@@ -29,3 +32,11 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
+
+    def action_task_action(self) -> None:
+        """Run the task action for the currently selected thread.
+
+        Thread selection is not yet wired (E4-3). Until then, this shows a
+        notification reminding the user to select a thread first.
+        """
+        self.notify("Task action: select a thread first")
