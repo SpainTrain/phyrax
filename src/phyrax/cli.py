@@ -133,6 +133,82 @@ def list_threads(
         raise typer.Exit(1) from exc
 
 
+@app.command(name="compose")
+def compose_draft(
+    thread: str | None = typer.Option(None, "--thread", help="Thread ID to reply to"),
+    body: str = typer.Option("-", "--body", help="Body text or '-' for stdin"),
+    to_addrs: list[str] | None = typer.Option(None, "--to", help="Override To recipients"),  # noqa: B008
+    cc_addrs: list[str] | None = typer.Option(None, "--cc", help="Override Cc recipients"),  # noqa: B008
+    subject_override: str | None = typer.Option(None, "--subject", help="Override subject"),
+    in_reply_to: str | None = typer.Option(None, "--in-reply-to", help="Override In-Reply-To"),
+) -> None:
+    """Stage a draft reply from the AI agent."""
+    import json
+    import sys
+    import uuid as uuid_mod
+
+    body_text = sys.stdin.read() if body == "-" else body
+
+    with _write_lock():
+        try:
+            config = PhyraxConfig.load()
+            draft_uuid = str(uuid_mod.uuid4())
+
+            if thread:
+                with Database() as db:
+                    messages = db.get_thread_messages(thread)
+                if not messages:
+                    typer.echo(f"Error: thread {thread!r} has no messages", err=True)
+                    raise typer.Exit(1)
+                newest = messages[-1]
+                from phyrax.composer import pick_alias
+
+                chosen_to = to_addrs or [newest.from_]
+                chosen_cc = cc_addrs or newest.cc
+                chosen_subject = subject_override or f"Re: {newest.subject}"
+                chosen_in_reply_to = in_reply_to or newest.message_id
+                chosen_from = pick_alias(newest, config)
+            else:
+                chosen_to = to_addrs or []
+                chosen_cc = cc_addrs or []
+                chosen_subject = subject_override or ""
+                chosen_in_reply_to = in_reply_to or ""
+                chosen_from = config.identity.primary
+
+            from phyrax.composer import save_draft
+            from phyrax.config import DRAFTS_DIR
+            from phyrax.models import Draft
+
+            draft = Draft(
+                uuid=draft_uuid,
+                thread_id=thread or "",
+                in_reply_to=chosen_in_reply_to,
+                to=chosen_to,
+                cc=chosen_cc,
+                subject=chosen_subject,
+                from_=chosen_from,
+                body_markdown=body_text,
+                cache_path=DRAFTS_DIR / f"{draft_uuid}.txt",
+            )
+            save_draft(draft, config)
+
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "draft_id": draft_uuid,
+                        "path": str(draft.cache_path),
+                    },
+                    indent=2,
+                )
+            )
+        except typer.Exit:
+            raise
+        except Exception as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(1) from exc
+
+
 @app.command()
 def archive(thread_id: Annotated[str, typer.Argument(help="Thread ID to archive")]) -> None:
     """Remove inbox tag from a thread."""
