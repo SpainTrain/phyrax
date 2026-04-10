@@ -68,7 +68,7 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
         from phyrax.tui.screens.thread_view import ThreadViewScreen
 
         event.stop()
-        self.app.push_screen(ThreadViewScreen(self._db, event.thread))
+        self.app.push_screen(ThreadViewScreen(self._db, event.thread, self._config))
 
     def on_thread_list_widget_bundle_header_selected(
         self, event: ThreadListWidget.BundleHeaderSelected

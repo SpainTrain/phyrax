@@ -16,10 +16,16 @@ from textual.app import App, ComposeResult
 from textual.screen import Screen
 from textual.widgets import Label
 
+from phyrax.config import PhyraxConfig
 from phyrax.database import Database
 from phyrax.models import MessageDetail, ThreadSummary
 from phyrax.tui.screens.thread_view import ThreadViewScreen
 from tests.fixtures.maildir_builder import MaildirFixture
+
+
+def _make_config() -> PhyraxConfig:
+    """Return a minimal PhyraxConfig for tests."""
+    return PhyraxConfig()
 
 # ---------------------------------------------------------------------------
 # Minimal host app for screen-push tests
@@ -78,7 +84,7 @@ async def test_thread_view_renders_messages(tmp_maildir: MaildirFixture) -> None
     boss_id = tmp_maildir.thread_ids["boss"]
     thread = _get_thread(db, boss_id)
 
-    screen = ThreadViewScreen(db, thread)
+    screen = ThreadViewScreen(db, thread, _make_config())
     app = _HostApp(screen)
 
     async with app.run_test(size=(120, 40)) as pilot:
@@ -107,7 +113,7 @@ async def test_thread_view_escape_pops_screen(tmp_maildir: MaildirFixture) -> No
     boss_id = tmp_maildir.thread_ids["boss"]
     thread = _get_thread(db, boss_id)
 
-    screen = ThreadViewScreen(db, thread)
+    screen = ThreadViewScreen(db, thread, _make_config())
     app = _HostApp(screen)
 
     async with app.run_test(size=(120, 40)) as pilot:
@@ -158,7 +164,7 @@ async def test_html_fallback_renders(tmp_maildir: MaildirFixture) -> None:
     )
 
     with unittest.mock.patch.object(db, "get_thread_messages", return_value=[html_msg]):
-        screen = ThreadViewScreen(db, thread)
+        screen = ThreadViewScreen(db, thread, _make_config())
         app = _HostApp(screen)
 
         async with app.run_test(size=(120, 40)) as pilot:
@@ -181,7 +187,7 @@ async def test_ctrl_g_opens_gmail_url(tmp_maildir: MaildirFixture) -> None:
     boss_id = tmp_maildir.thread_ids["boss"]
     thread = _get_thread(db, boss_id)
 
-    screen = ThreadViewScreen(db, thread)
+    screen = ThreadViewScreen(db, thread, _make_config())
     app = _HostApp(screen)
 
     captured_args: list[list[str]] = []

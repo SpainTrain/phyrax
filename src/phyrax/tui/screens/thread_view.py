@@ -7,7 +7,9 @@ ctrl+g opens the thread in Gmail web UI.
 
 from __future__ import annotations
 
+import logging
 import subprocess
+import uuid
 from datetime import UTC, datetime
 from typing import ClassVar
 
@@ -18,9 +20,12 @@ from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Static
 
+from phyrax.config import DRAFTS_DIR, PhyraxConfig
 from phyrax.database import Database
-from phyrax.models import AttachmentMeta, MessageDetail, ThreadSummary
+from phyrax.models import AttachmentMeta, Draft, MessageDetail, ThreadSummary
 from phyrax.tui.widgets.status_bar import StatusBar
+
+log = logging.getLogger("phyrax")
 
 _DIVIDER = "\u2500" * 60  # ────────────────────────────────────────────────────────────
 
@@ -105,10 +110,11 @@ class ThreadViewScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is g
         Binding("ctrl+g", "open_gmail", "Open in Gmail"),
     ]
 
-    def __init__(self, db: Database, thread: ThreadSummary) -> None:
+    def __init__(self, db: Database, thread: ThreadSummary, config: PhyraxConfig) -> None:
         super().__init__()
         self._db = db
         self._thread = thread
+        self._config = config
         self._messages: list[MessageDetail] = []
 
     def compose(self) -> ComposeResult:
@@ -128,9 +134,61 @@ class ThreadViewScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is g
             text = _build_message_text(msg, self._thread.subject)
             container.mount(Static(text, classes="message-block"))
 
-    def action_reply(self) -> None:
-        """Open ComposeModal anchored to the newest message (not yet implemented)."""
-        self.notify("Compose not yet implemented (E7-1)")
+    async def action_reply(self) -> None:
+        """Open ComposeModal for the newest message, then save and edit the draft."""
+        if not self._messages:
+            return
+        newest = self._messages[-1]
+
+        # 1. Push ComposeModal and wait for result.
+        from phyrax.tui.screens.compose import ComposeIntent, ComposeModal
+
+        intent: ComposeIntent | None = await self.app.push_screen_wait(
+            ComposeModal(newest, self._config)
+        )
+        if intent is None:
+            return  # user cancelled
+
+        # 2. Generate or create an empty draft.
+        from phyrax.composer import generate_draft, open_editor, save_draft
+
+        if intent.instructions:
+            try:
+                with self.app.suspend():
+                    draft = generate_draft(
+                        newest,
+                        intent.instructions,
+                        self._config,
+                        require_full_context=intent.require_full_context,
+                    )
+            except Exception as exc:
+                log.error("action_reply: generate_draft failed: %s", exc)
+                self.notify(f"Agent error: {exc}", severity="error")
+                return
+        else:
+            draft_id = str(uuid.uuid4())
+            draft = Draft(
+                uuid=draft_id,
+                thread_id=self._thread.thread_id,
+                in_reply_to=newest.message_id,
+                to=[newest.from_],
+                cc=newest.cc,
+                subject=f"Re: {newest.subject}",
+                from_=intent.from_alias,
+                body_markdown="",
+                cache_path=DRAFTS_DIR / f"{draft_id}.txt",
+            )
+
+        # 3. Save draft before opening editor (crash recovery).
+        save_draft(draft, self._config)
+
+        # 4. Open $EDITOR so the user can review/edit.
+        with self.app.suspend():
+            draft = open_editor(draft)
+
+        # 5. Re-save after editing and notify.
+        save_draft(draft, self._config)
+        self.notify("Draft saved. Press o for Outbox.")
 
     def action_open_gmail(self) -> None:
         """Open the thread in Gmail's web UI via xdg-open."""
