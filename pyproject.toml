@@ -1,9 +1,19 @@
 [project]
 name = "phyrax"
 version = "0.1.0"
-description = "A hyper-optimized, AI-assisted CLI email workflow focused on bundling, task management, and speed."
+description = "Keyboard-first terminal email client with AI-assisted triage and drafting"
+authors = [{ name = "SpainTrain" }]
+license = { text = "MIT" }
 readme = "README.md"
-license = "MIT"
+keywords = ["email", "tui", "notmuch", "gmail", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Email",
+]
 requires-python = ">=3.12"
 dependencies = [
     "textual>=1.0",
@@ -17,6 +27,9 @@ dependencies = [
 
 [project.scripts]
 phr = "phyrax.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/SpainTrain/phyrax"
 
 [build-system]
 requires = ["hatchling"]
