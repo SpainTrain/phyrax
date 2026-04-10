@@ -220,8 +220,10 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
         await run_action_for_thread(self.app, messages[-1], self._config)
 
     def action_outbox(self) -> None:
-        """Stub: Outbox screen is implemented in E7-4."""
-        self.notify("Outbox not yet implemented (E7-4)")
+        """Push OutboxScreen for draft review and dispatch."""
+        from phyrax.tui.screens.outbox import OutboxScreen
+
+        self.app.push_screen(OutboxScreen())
 
     def action_command_palette(self) -> None:
         """Open the command palette overlay."""
