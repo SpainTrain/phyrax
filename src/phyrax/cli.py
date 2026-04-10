@@ -39,6 +39,9 @@ def _write_lock() -> Generator[None, None, None]:
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
     """Launch the Phyrax TUI, or run a headless subcommand."""
+    from phyrax.logging import setup_logging
+
+    setup_logging()
     if ctx.invoked_subcommand is None:
         run_app()
 

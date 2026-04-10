@@ -79,4 +79,7 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
 
 def run_app() -> None:
     """Launch the PhyraxApp TUI."""
+    from phyrax.logging import setup_logging
+
+    setup_logging()
     PhyraxApp().run()
