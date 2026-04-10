@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 from textual.app import App, ComposeResult
 from textual.screen import Screen
 
+from phyrax.composer import recover_unsent_drafts
 from phyrax.config import LOCKFILE, PhyraxConfig
 from phyrax.database import Database
 from phyrax.exceptions import LockfileError
@@ -39,10 +40,19 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
         # 1. Acquire PID lockfile.
         LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
         if LOCKFILE.exists():
-            raise LockfileError(
-                f"Another phr instance may be running (lockfile exists: {LOCKFILE}). "
-                "Remove it manually if the previous instance crashed."
-            )
+            try:
+                stale_pid = int(LOCKFILE.read_text(encoding="utf-8").strip())
+                os.kill(stale_pid, 0)  # raises ProcessLookupError if not running
+                raise LockfileError(
+                    f"Another phr instance is running (PID {stale_pid}). "
+                    f"If it crashed, delete: {LOCKFILE}"
+                )
+            except (ValueError, ProcessLookupError):
+                # PID not running or file malformed — stale lockfile, clean up
+                LOCKFILE.unlink(missing_ok=True)
+            except PermissionError:
+                # Process exists but we can't signal it — assume it's running
+                raise LockfileError(f"Could not verify lockfile PID. Delete: {LOCKFILE}") from None
         LOCKFILE.write_text(str(os.getpid()), encoding="utf-8")
 
         # 2. Load config.
@@ -61,6 +71,11 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
 
         # 5. Push InboxScreen.
         self.push_screen(InboxScreen(self._db, config))
+
+        # 6. Check for orphaned drafts from a previous crash.
+        drafts = recover_unsent_drafts()
+        if drafts:
+            self.notify(f"{len(drafts)} unsent draft(s) in Outbox. Press 'o' to review.")
 
     def on_unmount(self) -> None:
         """Clean up lockfile and database on exit."""

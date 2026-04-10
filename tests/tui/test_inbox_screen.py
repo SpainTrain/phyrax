@@ -204,11 +204,15 @@ async def test_second_instance_raises_lockfile_error(
     patched_config_load: Path,
 ) -> None:
     """A second PhyraxApp raises LockfileError when lockfile already exists."""
+    import os
+
     from phyrax.app import PhyraxApp
 
-    # Pre-create the lockfile to simulate a running instance
+    # Pre-create the lockfile with the current PID to simulate a live running instance.
+    # Using the current PID ensures os.kill(pid, 0) succeeds and the stale-lockfile
+    # cleanup path is NOT triggered, so LockfileError is raised instead.
     patched_lockfile.parent.mkdir(parents=True, exist_ok=True)
-    patched_lockfile.write_text("99999", encoding="utf-8")
+    patched_lockfile.write_text(str(os.getpid()), encoding="utf-8")
 
     with pytest.raises(LockfileError):
         async with PhyraxApp().run_test(size=(120, 40)) as pilot:

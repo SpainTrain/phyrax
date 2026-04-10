@@ -12,6 +12,8 @@ import email
 import email.policy
 import logging
 import subprocess
+import time
+from collections.abc import Callable
 from email.message import Message
 from typing import Any
 
@@ -156,6 +158,30 @@ def _get_attachment_metas(nm_msg: Any) -> list[AttachmentMeta]:
         return []
     _, _, attachments = _walk_mime(parsed)
     return attachments
+
+
+def _with_retry(fn: Callable[[], None]) -> None:
+    """Retry a DB write operation with exponential backoff on transient errors.
+
+    Attempts the operation up to 4 times (initial + 3 retries) with delays of
+    0.15 s, 0.25 s, and 0.5 s between attempts.
+
+    Raises:
+        DatabaseError: If all attempts are exhausted.
+    """
+    delays = [0.15, 0.25, 0.5]
+    last_exc: Exception | None = None
+    for delay in [0, *delays]:
+        if delay:
+            time.sleep(delay)
+        try:
+            fn()
+            return
+        except DatabaseError:
+            raise  # Already a domain exception — don't swallow it
+        except Exception as exc:
+            last_exc = exc
+    raise DatabaseError("DB busy — lieer likely syncing") from last_exc
 
 
 class Database:
@@ -372,11 +398,16 @@ class Database:
         Raises:
             DatabaseError: If the tags cannot be applied.
         """
-        try:
+        messages = self._iter_thread_messages(thread_id)
+
+        def _do_add() -> None:
             with self._db.atomic():
-                for nm_msg in self._iter_thread_messages(thread_id):
+                for nm_msg in messages:
                     for tag in tags:
                         nm_msg.tags.add(tag)
+
+        try:
+            _with_retry(_do_add)
         except DatabaseError:
             raise
         except Exception as exc:
@@ -392,11 +423,16 @@ class Database:
         Raises:
             DatabaseError: If the tags cannot be removed.
         """
-        try:
+        messages = self._iter_thread_messages(thread_id)
+
+        def _do_remove() -> None:
             with self._db.atomic():
-                for nm_msg in self._iter_thread_messages(thread_id):
+                for nm_msg in messages:
                     for tag in tags:
                         nm_msg.tags.discard(tag)
+
+        try:
+            _with_retry(_do_remove)
         except DatabaseError:
             raise
         except Exception as exc:
@@ -464,9 +500,7 @@ class Database:
                         return payload
                     return b""
 
-        raise DatabaseError(
-            f"Attachment {filename!r} not found in message {message_id!r}"
-        )
+        raise DatabaseError(f"Attachment {filename!r} not found in message {message_id!r}")
 
     # ------------------------------------------------------------------
     # Lifecycle
