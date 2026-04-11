@@ -64,7 +64,6 @@ class StatusBar(Widget):
     DEFAULT_CSS = """
     StatusBar {
         height: 1;
-        dock: bottom;
     }
     StatusBar Label.sync-stale {
         color: $warning;
