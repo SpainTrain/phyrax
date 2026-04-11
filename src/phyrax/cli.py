@@ -35,7 +35,7 @@ def _run_demo() -> None:
 
     # Locate tests/fixtures so we can import build_maildir.
     # The maildir builder lives in tests/ which is not installed as a package.
-    _repo_root = Path(__file__).parent.parent.parent.parent  # src/phyrax/cli.py → repo root
+    _repo_root = Path(__file__).parent.parent.parent  # src/phyrax/cli.py → repo root
     tests_dir = _repo_root / "tests"
     if str(tests_dir) not in sys.path:
         sys.path.insert(0, str(tests_dir))
