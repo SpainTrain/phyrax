@@ -39,68 +39,7 @@ _setup_fixture() {
     # Build a synthetic fixture mailbox under a fresh temp dir.
     # Writes a minimal config.json so FTUX is skipped.
     # Prints shell export lines to stdout.
-    python3 - <<'PYEOF'
-import json
-import sys
-import tempfile
-from pathlib import Path
-
-repo_root = Path(sys.argv[0]).parent if sys.argv[0] != "-c" else Path.cwd()
-# Find repo root by walking up to find pyproject.toml
-p = Path(__file__) if "__file__" in dir() else Path.cwd()
-
-# When run via python3 - <<PYEOF, we need to locate the repo root differently.
-# Use REPO_ROOT env var injected by the caller.
-import os
-repo_root = Path(os.environ["REPO_ROOT"])
-sys.path.insert(0, str(repo_root / "tests"))
-
-from fixtures.maildir_builder import build_maildir
-
-tmp = tempfile.mkdtemp(prefix="phyrax-harness-")
-root = Path(tmp)
-
-fixture = build_maildir(root)
-
-# Write minimal config to skip FTUX
-config_dir = root / "config" / "phyrax"
-config_dir.mkdir(parents=True)
-config = {
-    "identity": {"primary": "test@example.com", "aliases": []},
-    "ai": {"agent_command": "echo"},
-    "bundles": [
-        {
-            "name": "Alerts",
-            "label": "alerts",
-            "priority": 1,
-            "rules": [{"field": "from", "operator": "contains", "value": "alerts@"}],
-        },
-        {
-            "name": "Newsletters",
-            "label": "newsletters",
-            "priority": 2,
-            "rules": [{"field": "from", "operator": "contains", "value": "substack.com"}],
-        },
-    ],
-    "compose": {"include_quote": True},
-    "task": {"action": None},
-    "keys": {
-        "archive": "a",
-        "reply": "r",
-        "task": "t",
-        "feedback": "f",
-        "outbox": "o",
-        "chat": "question_mark",
-    },
-}
-(config_dir / "config.json").write_text(json.dumps(config, indent=2))
-
-print(f"HARNESS_TMP={tmp}")
-print(f"NOTMUCH_CONFIG={fixture.notmuch_config}")
-print(f"XDG_CONFIG_HOME={root / 'config'}")
-print(f"XDG_CACHE_HOME={root / 'cache'}")
-print(f"XDG_STATE_HOME={root / 'state'}")
-PYEOF
+    REPO_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/_fixture_env.sh"
 }
 
 # ---------------------------------------------------------------------------
