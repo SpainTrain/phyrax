@@ -13,6 +13,7 @@ from typing import ClassVar
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
+from textual.widgets import Footer
 
 from phyrax.actions.builtins import run_task_action
 from phyrax.bundler import generate_bundle_rule
@@ -39,14 +40,15 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
     # at runtime, so user overrides take effect (subject to re-mount).
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "Quit"),
-        Binding("a", "archive", "Archive", show=False),
-        Binding("enter", "select", "Open", show=False),
+        Binding("enter", "select", "Open"),
+        Binding("a", "archive", "Archive"),
+        Binding("r", "reply", "Reply"),
+        Binding("t", "task_action", "Task"),
+        Binding("space", "action_menu", "Actions"),
+        Binding("o", "outbox", "Outbox"),
+        Binding("ctrl+p", "command_palette", "Palette"),
+        Binding("?", "chat", "Chat"),
         Binding("f", "feedback", "Feedback", show=False),
-        Binding("t", "task_action", "Task", show=False),
-        Binding("space", "action_menu", "Actions", show=False),
-        Binding("o", "outbox", "Outbox", show=False),
-        Binding("ctrl+p", "command_palette", "Command Palette", show=False),
-        Binding("question_mark", "chat", "Chat", show=False),
     ]
 
     def __init__(self, db: Database, config: PhyraxConfig) -> None:
@@ -57,6 +59,7 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
     def compose(self) -> ComposeResult:
         yield ThreadListWidget(self._db, self._config)
         yield StatusBar()
+        yield Footer()
 
     # ---------------------------------------------------------------------------
     # Message handlers — ThreadListWidget bubbles these up instead of acting
