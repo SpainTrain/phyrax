@@ -1,0 +1,6 @@
+StatusBar {
+    height: 1;
+}
+StatusBar Label.sync-stale {
+    color: $warning;
+}

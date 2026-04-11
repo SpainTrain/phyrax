@@ -33,25 +33,7 @@ class ActionMenu(ModalScreen[ActionTemplate | None]):
         Binding("escape", "cancel", "Cancel"),
     ]
 
-    CSS = """
-    ActionMenu {
-        align: center middle;
-    }
-
-    #action-panel {
-        width: 60;
-        height: auto;
-        max-height: 20;
-        padding: 1 2;
-        border: solid $primary;
-        background: $surface;
-    }
-
-    #title {
-        text-style: bold;
-        margin-bottom: 1;
-    }
-    """
+    CSS_PATH = "action_menu.tcss"
 
     def __init__(self) -> None:
         super().__init__()

@@ -74,50 +74,7 @@ class _WizardResult:
 class WizardScreen(ModalScreen[_WizardResult | None]):
     """Modal screen that collects the AI CLI command during first-run setup."""
 
-    CSS = """
-    WizardScreen {
-        align: center middle;
-    }
-    Vertical {
-        width: 70;
-        height: auto;
-        padding: 1 2;
-        border: solid $primary;
-        background: $surface;
-    }
-    #title {
-        text-align: center;
-        text-style: bold;
-        margin-bottom: 1;
-    }
-    #subtitle {
-        text-align: center;
-        margin-bottom: 1;
-        color: $text-muted;
-    }
-    #preset-list {
-        height: auto;
-        margin-bottom: 1;
-    }
-    #custom-input {
-        display: none;
-        margin-bottom: 1;
-    }
-    #warning-label {
-        display: none;
-        color: $warning;
-        text-align: center;
-        margin-bottom: 1;
-    }
-    #btn-row {
-        height: auto;
-        layout: horizontal;
-        align: center middle;
-    }
-    Button {
-        margin: 0 1;
-    }
-    """
+    CSS_PATH = "wizard.tcss"
 
     def compose(self) -> ComposeResult:
         with Vertical():

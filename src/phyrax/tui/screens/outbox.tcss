@@ -1,0 +1,12 @@
+OutboxScreen {
+    layout: vertical;
+}
+#draft-table {
+    height: 1fr;
+}
+#preview-pane {
+    height: 1fr;
+    border: solid $primary;
+    padding: 0 1;
+    overflow-y: auto;
+}

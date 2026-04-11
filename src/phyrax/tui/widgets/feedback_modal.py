@@ -21,13 +21,7 @@ class FeedbackModal(ModalScreen[str | None]):
         Binding("escape", "cancel", "Cancel"),
     ]
 
-    CSS = """
-    FeedbackModal { align: center middle; }
-    #feedback-panel {
-        width: 60; height: auto; padding: 1 2;
-        border: solid $primary; background: $surface;
-    }
-    """
+    CSS_PATH = "feedback_modal.tcss"
 
     def __init__(self, thread_subject: str) -> None:
         super().__init__()

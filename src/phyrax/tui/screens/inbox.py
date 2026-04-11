@@ -35,11 +35,7 @@ log = logging.getLogger("phyrax")
 class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generic at runtime but unparameterized here
     """Main inbox screen — bundles and threads with full keybinding dispatch."""
 
-    DEFAULT_CSS = """
-    InboxScreen ThreadListWidget {
-        height: 1fr;
-    }
-    """
+    CSS_PATH = "inbox.tcss"
 
     # BINDINGS uses the default key strings so that Textual's footer and help
     # system show sensible defaults. Action handlers still look up config.keys

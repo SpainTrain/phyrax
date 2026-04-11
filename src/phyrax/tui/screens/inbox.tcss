@@ -1,0 +1,3 @@
+InboxScreen ThreadListWidget {
+    height: 1fr;
+}

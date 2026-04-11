@@ -65,13 +65,7 @@ class _InputModal(ModalScreen[str]):
         Binding("escape", "cancel", "Cancel"),
     ]
 
-    CSS = """
-    _InputModal { align: center middle; }
-    #chat-panel {
-        width: 70; height: auto; padding: 1 2;
-        border: solid $primary; background: $surface;
-    }
-    """
+    CSS_PATH = "chat.tcss"
 
     def compose(self) -> ComposeResult:
         with Vertical(id="chat-panel"):

@@ -1,0 +1,12 @@
+ThreadViewScreen {
+    layout: vertical;
+}
+
+#message-list {
+    height: 30%;
+    border-bottom: solid $accent;
+}
+
+#message-detail {
+    height: 1fr;
+}

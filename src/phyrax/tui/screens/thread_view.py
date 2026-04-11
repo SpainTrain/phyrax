@@ -120,20 +120,7 @@ class ThreadViewScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is g
     message is currently highlighted.
     """
 
-    DEFAULT_CSS = """
-    ThreadViewScreen {
-        layout: vertical;
-    }
-
-    #message-list {
-        height: 30%;
-        border-bottom: solid $accent;
-    }
-
-    #message-detail {
-        height: 1fr;
-    }
-    """
+    CSS_PATH = "thread_view.tcss"
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "pop_screen", "Back"),

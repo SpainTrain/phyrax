@@ -1,0 +1,5 @@
+FeedbackModal { align: center middle; }
+#feedback-panel {
+    width: 60; height: auto; padding: 1 2;
+    border: solid $primary; background: $surface;
+}

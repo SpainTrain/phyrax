@@ -1,0 +1,23 @@
+ThreadListWidget {
+    height: 1fr;
+}
+ThreadListWidget > ListView {
+    height: 1fr;
+}
+ThreadRowItem {
+    height: 1;
+    padding: 0 1;
+}
+ThreadRowItem.--highlight {
+    background: $accent;
+    color: $text;
+}
+BundleHeaderItem {
+    height: 1;
+    padding: 0 1;
+    color: $text-muted;
+}
+BundleHeaderItem.--highlight {
+    background: $accent-darken-1;
+    color: $text;
+}

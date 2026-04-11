@@ -39,24 +39,7 @@ class CommandPalette(ModalScreen[None]):
         Binding("escape", "cancel", "Cancel"),
     ]
 
-    CSS = """
-    CommandPalette {
-        align: center middle;
-    }
-
-    #palette-panel {
-        width: 60;
-        height: auto;
-        max-height: 20;
-        padding: 1 2;
-        border: solid $primary;
-        background: $surface;
-    }
-
-    #search-input {
-        margin-bottom: 1;
-    }
-    """
+    CSS_PATH = "command_palette.tcss"
 
     def __init__(self, config: PhyraxConfig) -> None:
         super().__init__()

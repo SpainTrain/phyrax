@@ -1,0 +1,17 @@
+ActionMenu {
+    align: center middle;
+}
+
+#action-panel {
+    width: 60;
+    height: auto;
+    max-height: 20;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+
+#title {
+    text-style: bold;
+    margin-bottom: 1;
+}

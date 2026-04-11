@@ -1,0 +1,21 @@
+ComposeModal {
+    align: center middle;
+}
+#compose-panel {
+    width: 70;
+    height: auto;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+#header-label {
+    text-style: bold;
+    margin-bottom: 1;
+}
+#from-label {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+#instructions-input {
+    margin-bottom: 1;
+}

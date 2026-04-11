@@ -37,20 +37,7 @@ class OutboxScreen(Screen[None]):
         Binding("s", "send_draft", "Send", show=True),
     ]
 
-    DEFAULT_CSS = """
-    OutboxScreen {
-        layout: vertical;
-    }
-    #draft-table {
-        height: 1fr;
-    }
-    #preview-pane {
-        height: 1fr;
-        border: solid $primary;
-        padding: 0 1;
-        overflow-y: auto;
-    }
-    """
+    CSS_PATH = "outbox.tcss"
 
     def compose(self) -> ComposeResult:
         yield DataTable(id="draft-table")

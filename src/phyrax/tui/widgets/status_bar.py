@@ -61,14 +61,7 @@ def _sync_status(db_path: Path | None) -> str:
 class StatusBar(Widget):
     """Bottom status bar showing screen name, unread count, and sync status."""
 
-    DEFAULT_CSS = """
-    StatusBar {
-        height: 1;
-    }
-    StatusBar Label.sync-stale {
-        color: $warning;
-    }
-    """
+    CSS_PATH = "status_bar.tcss"
 
     def __init__(
         self,

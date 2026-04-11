@@ -1,0 +1,5 @@
+_InputModal { align: center middle; }
+#chat-panel {
+    width: 70; height: auto; padding: 1 2;
+    border: solid $primary; background: $surface;
+}

@@ -106,32 +106,6 @@ def _tag_pills(tags: frozenset[str]) -> str:
 # Custom ListItem subclasses
 # ---------------------------------------------------------------------------
 
-_THREAD_ROW_CSS = """
-ThreadListWidget {
-    height: 1fr;
-}
-ThreadListWidget > ListView {
-    height: 1fr;
-}
-ThreadRowItem {
-    height: 1;
-    padding: 0 1;
-}
-ThreadRowItem.--highlight {
-    background: $accent;
-    color: $text;
-}
-BundleHeaderItem {
-    height: 1;
-    padding: 0 1;
-    color: $text-muted;
-}
-BundleHeaderItem.--highlight {
-    background: $accent-darken-1;
-    color: $text;
-}
-"""
-
 
 class ThreadRowItem(ListItem):
     """A ListItem that renders a single ThreadSummary row."""
@@ -190,7 +164,7 @@ class ThreadListWidget(Widget):
         Binding("enter", "select", "Open", show=False),
     ]
 
-    DEFAULT_CSS = _THREAD_ROW_CSS
+    CSS_PATH = "thread_list.tcss"
 
     # Reactive cursor index — drives highlight refresh.
     cursor: reactive[int] = reactive(0, repaint=True)
