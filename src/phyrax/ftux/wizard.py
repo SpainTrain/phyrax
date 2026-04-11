@@ -13,6 +13,7 @@ from typing import Any
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
+from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView
 
 from phyrax.config import AIConfig
@@ -66,15 +67,15 @@ class _WizardResult:
 
 
 # ---------------------------------------------------------------------------
-# Textual wizard app
+# Wizard screen — extends ModalScreen so it can be pushed onto an existing app
 # ---------------------------------------------------------------------------
 
 
-class _WizardApp(App[_WizardResult | None]):
-    """Standalone Textual app that collects the AI CLI command."""
+class WizardScreen(ModalScreen[_WizardResult | None]):
+    """Modal screen that collects the AI CLI command during first-run setup."""
 
     CSS = """
-    Screen {
+    WizardScreen {
         align: center middle;
     }
     Vertical {
@@ -173,7 +174,7 @@ class _WizardApp(App[_WizardResult | None]):
             self._attempt_select(proceed_anyway=False)
         elif button_id == "btn-proceed":
             command = self._get_current_command()
-            self.exit(_WizardResult(command=command, _proceed_anyway=True))
+            self.dismiss(_WizardResult(command=command, _proceed_anyway=True))
         elif button_id == "btn-reselect":
             self._show_warning = False
             self._update_button_visibility()
@@ -188,7 +189,7 @@ class _WizardApp(App[_WizardResult | None]):
         token = command.split()[0]
         if shutil.which(token) is not None:
             # Binary found — proceed immediately
-            self.exit(_WizardResult(command=command))
+            self.dismiss(_WizardResult(command=command))
         else:
             # Binary not found — show warning and offer bypass/reselect
             self._show_warning = True
@@ -209,9 +210,19 @@ def run_bootstrap_wizard() -> AIConfig:
 
     Presets: Claude Code, Gemini CLI, Goose, OpenCode, Custom.
     Validates binary with shutil.which(); warns but allows bypass if not found.
+
+    Note: This function creates a standalone App to host the WizardScreen and
+    blocks until it exits. It must NOT be called from inside a running Textual
+    event loop (e.g. from on_mount). Use ``push_screen_wait(WizardScreen())``
+    instead when inside an async context.
     """
-    wizard = _WizardApp()
-    result = wizard.run()  # blocks until .exit() is called
+
+    class _WizardHostApp(App[_WizardResult | None]):
+        def on_mount(self) -> None:
+            self.push_screen(WizardScreen(), callback=self.exit)
+
+    host = _WizardHostApp()
+    result = host.run()
     if result is None:
         # User dismissed the wizard without selecting — use default
         return AIConfig()

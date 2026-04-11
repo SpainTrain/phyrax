@@ -1,8 +1,9 @@
 """Tests for phyrax.ftux.wizard — bootstrap wizard and post-bootstrap handoff.
 
 Coverage:
-- _WizardApp: binary present on PATH → returns AIConfig with right command
-- _WizardApp: missing binary → warning shown, user can bypass via btn-proceed
+- WizardScreen: binary present on PATH → dismisses with correct _WizardResult
+- WizardScreen: missing binary → warning shown, user can bypass via btn-proceed
+- run_bootstrap_wizard: returns AIConfig from wizard result
 - run_post_bootstrap_handoff: fires only when is_first_run; pushes ChatScreen
 - FIRST_RUN_PREAMBLE: mentions key phr concepts (phr compose, identity, bundles, docs/actions/)
 """
@@ -12,14 +13,38 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from textual import work
+from textual.app import App, ComposeResult
 
 from phyrax.config import AIConfig
 from phyrax.ftux.wizard import (
     FIRST_RUN_PREAMBLE,
-    _WizardApp,
+    WizardScreen,
+    _WizardResult,
     run_bootstrap_wizard,
     run_post_bootstrap_handoff,
 )
+
+# ---------------------------------------------------------------------------
+# Helper: host app that pushes WizardScreen and captures the result
+# ---------------------------------------------------------------------------
+
+
+class _HostApp(App[_WizardResult | None]):
+    """Minimal host app used in tests to push WizardScreen as a modal."""
+
+    def compose(self) -> ComposeResult:
+        return iter([])
+
+    def on_mount(self) -> None:
+        self._run_wizard()
+
+    @work
+    async def _run_wizard(self) -> None:
+        # push_screen_wait requires a worker context.
+        result = await self.push_screen_wait(WizardScreen())
+        self.exit(result)
+
 
 # ---------------------------------------------------------------------------
 # Preamble content tests (no app needed)
@@ -47,14 +72,14 @@ def test_first_run_preamble_mentions_docs_actions() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _WizardApp: binary present on PATH
+# WizardScreen: binary present on PATH
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_wizard_binary_found_returns_ai_config_with_command() -> None:
-    """Selecting a preset whose binary is on PATH exits with the correct command."""
-    app = _WizardApp()
+async def test_wizard_binary_found_returns_result_with_command() -> None:
+    """Selecting a preset whose binary is on PATH dismisses with the correct command."""
+    app = _HostApp()
 
     # Claude Code is index 0; "claude" is the binary in "claude -p %s".
     with patch("phyrax.ftux.wizard.shutil.which", return_value="/usr/bin/claude"):
@@ -69,32 +94,31 @@ async def test_wizard_binary_found_returns_ai_config_with_command() -> None:
 
 
 @pytest.mark.asyncio
-async def test_wizard_binary_found_no_warning_shown() -> None:
-    """When binary is found, the warning label must remain hidden."""
-    app = _WizardApp()
+async def test_wizard_binary_found_no_proceed_anyway() -> None:
+    """When binary is found, _proceed_anyway must be False."""
+    app = _HostApp()
 
     with patch("phyrax.ftux.wizard.shutil.which", return_value="/usr/bin/claude"):
         async with app.run_test() as pilot:
             await pilot.click("#btn-select")
             await pilot.pause()
-            # App exits immediately; just check result is non-None (no bypass needed).
 
     result = app.return_value
     assert result is not None
-    # _proceed_anyway is False because binary was found directly.
     assert result._proceed_anyway is False
 
 
 @pytest.mark.asyncio
 async def test_wizard_gemini_preset_command() -> None:
     """Selecting the Gemini CLI preset returns the correct command template."""
-    app = _WizardApp()
+    app = _HostApp()
 
     with patch("phyrax.ftux.wizard.shutil.which", return_value="/usr/local/bin/gemini"):
         async with app.run_test() as pilot:
-            # Focus the list, arrow down to Gemini CLI (index 1), then press Enter
-            # to fire the ListView.Selected message which updates _selected_index.
-            list_view = app.query_one("#preset-list")
+            # Wait for the worker to push WizardScreen.
+            await pilot.pause()
+            # Query from the active screen (the WizardScreen modal), not the default.
+            list_view = pilot.app.screen.query_one("#preset-list")
             list_view.focus()
             await pilot.pause()
             await pilot.press("down")  # highlight Gemini CLI
@@ -109,20 +133,23 @@ async def test_wizard_gemini_preset_command() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _WizardApp: binary missing from PATH
+# WizardScreen: binary missing from PATH
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_wizard_missing_binary_shows_warning() -> None:
     """When binary is not on PATH, clicking Select reveals the warning label."""
-    app = _WizardApp()
+    app = _HostApp()
 
     with patch("phyrax.ftux.wizard.shutil.which", return_value=None):
         async with app.run_test() as pilot:
+            # Wait for worker to push WizardScreen.
+            await pilot.pause()
             await pilot.click("#btn-select")
             await pilot.pause()
-            warning = app.query_one("#warning-label")
+            # Query from the active screen (the WizardScreen modal).
+            warning = pilot.app.screen.query_one("#warning-label")
             assert warning.display is True
             # Dismiss to avoid hanging.
             await pilot.click("#btn-proceed")
@@ -131,8 +158,8 @@ async def test_wizard_missing_binary_shows_warning() -> None:
 
 @pytest.mark.asyncio
 async def test_wizard_missing_binary_proceed_anyway_exits_with_command() -> None:
-    """Clicking 'Proceed anyway' exits the wizard even when binary is missing."""
-    app = _WizardApp()
+    """Clicking 'Proceed anyway' dismisses the wizard even when binary is missing."""
+    app = _HostApp()
 
     with patch("phyrax.ftux.wizard.shutil.which", return_value=None):
         async with app.run_test() as pilot:
@@ -150,14 +177,16 @@ async def test_wizard_missing_binary_proceed_anyway_exits_with_command() -> None
 @pytest.mark.asyncio
 async def test_wizard_missing_binary_reselect_hides_warning() -> None:
     """Clicking 'Re-select' hides the warning and returns focus to the list."""
-    app = _WizardApp()
+    app = _HostApp()
 
     with patch("phyrax.ftux.wizard.shutil.which", return_value=None):
         async with app.run_test() as pilot:
+            # Wait for worker to push WizardScreen.
+            await pilot.pause()
             await pilot.click("#btn-select")
             await pilot.pause()
-            # Warning is visible.
-            warning = app.query_one("#warning-label")
+            # Query from the active screen (the WizardScreen modal).
+            warning = pilot.app.screen.query_one("#warning-label")
             assert warning.display is True
             # Click Re-select.
             await pilot.click("#btn-reselect")
@@ -176,12 +205,12 @@ async def test_wizard_missing_binary_reselect_hides_warning() -> None:
 
 def test_run_bootstrap_wizard_returns_ai_config() -> None:
     """run_bootstrap_wizard() must return an AIConfig instance."""
-    mock_result = MagicMock()
-    mock_result.command = "myai --prompt %s"
+    # _WizardHostApp is a local class inside run_bootstrap_wizard, so we can't
+    # patch it directly.  Instead, patch App.run on the base class so the
+    # internal _WizardHostApp().run() returns a controlled result.
+    mock_result = _WizardResult(command="myai --prompt %s")
 
-    with patch("phyrax.ftux.wizard._WizardApp") as MockApp:
-        instance = MockApp.return_value
-        instance.run.return_value = mock_result
+    with patch("phyrax.ftux.wizard.App.run", return_value=mock_result):
         result = run_bootstrap_wizard()
 
     assert isinstance(result, AIConfig)
@@ -190,9 +219,7 @@ def test_run_bootstrap_wizard_returns_ai_config() -> None:
 
 def test_run_bootstrap_wizard_dismissed_returns_default_ai_config() -> None:
     """If user dismisses the wizard (result=None), return default AIConfig."""
-    with patch("phyrax.ftux.wizard._WizardApp") as MockApp:
-        instance = MockApp.return_value
-        instance.run.return_value = None
+    with patch("phyrax.ftux.wizard.App.run", return_value=None):
         result = run_bootstrap_wizard()
 
     assert isinstance(result, AIConfig)

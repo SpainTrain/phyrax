@@ -13,16 +13,14 @@ All tests run against the synthetic fixture mailbox — never the real mailbox.
 
 from __future__ import annotations
 
-from textual.app import App, ComposeResult
-
 import pytest
+from textual.app import App
 
 from phyrax.config import PhyraxConfig
 from phyrax.database import Database
 from phyrax.tui.screens.inbox import InboxScreen
 from phyrax.tui.widgets.thread_list import ThreadListWidget, ThreadRow
 from tests.fixtures.maildir_builder import MaildirFixture
-
 
 # ---------------------------------------------------------------------------
 # Test app + helpers
@@ -49,9 +47,7 @@ def _make_config() -> PhyraxConfig:
                     "name": "Newsletters",
                     "label": "newsletters",
                     "priority": 2,
-                    "rules": [
-                        {"field": "from", "operator": "contains", "value": "substack.com"}
-                    ],
+                    "rules": [{"field": "from", "operator": "contains", "value": "substack.com"}],
                 },
             ],
             "compose": {"include_quote": True},

@@ -12,14 +12,15 @@ import os
 from collections.abc import Callable
 from typing import Any, ClassVar
 
+from textual import work
 from textual.app import App, ComposeResult
 from textual.screen import Screen
 
 from phyrax.composer import recover_unsent_drafts
-from phyrax.config import LOCKFILE, PhyraxConfig
+from phyrax.config import LOCKFILE, AIConfig, PhyraxConfig
 from phyrax.database import Database
 from phyrax.exceptions import LockfileError
-from phyrax.ftux.wizard import run_bootstrap_wizard, run_post_bootstrap_handoff
+from phyrax.ftux.wizard import WizardScreen, run_post_bootstrap_handoff
 from phyrax.tui.screens.inbox import InboxScreen
 
 log = logging.getLogger("phyrax")
@@ -56,23 +57,37 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
         LOCKFILE.write_text(str(os.getpid()), encoding="utf-8")
 
         # 2. Load config.
-        config = PhyraxConfig.load()
+        self._config = PhyraxConfig.load()
 
         # 3. Open database.
         self._db = Database()
 
-        # 4. FTUX routing.
+        # 4. Route to FTUX or straight to inbox (via worker to allow push_screen_wait).
+        self._startup()
+
+    @work
+    async def _startup(self) -> None:
+        """Worker that handles FTUX routing and then pushes InboxScreen.
+
+        Must run in a worker so that push_screen_wait() is available when the
+        wizard screen needs to be awaited.
+        """
+        config = self._config
+
+        # FTUX routing.
         if config.is_first_run:
-            ai_config = run_bootstrap_wizard()
-            config.ai = ai_config
+            # push_screen_wait is legal here because we are running in a worker.
+            wizard_result = await self.push_screen_wait(WizardScreen())
+            if wizard_result is not None:
+                config.ai = AIConfig(agent_command=wizard_result.command)
             config.save()
             with contextlib.suppress(NotImplementedError):
                 run_post_bootstrap_handoff(self)
 
-        # 5. Push InboxScreen.
+        # Push InboxScreen.
         self.push_screen(InboxScreen(self._db, config))
 
-        # 6. Check for orphaned drafts from a previous crash.
+        # Check for orphaned drafts from a previous crash.
         drafts = recover_unsent_drafts()
         if drafts:
             self.notify(f"{len(drafts)} unsent draft(s) in Outbox. Press 'o' to review.")
