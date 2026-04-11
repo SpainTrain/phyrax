@@ -105,7 +105,7 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
         """Quit the application."""
         self.app.exit()
 
-    def action_archive(self) -> None:
+    async def action_archive(self) -> None:
         """Archive the selected thread or all threads under a bundle header."""
         row = self._get_selected_row()
         if row is None:
@@ -120,7 +120,7 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
                 self.notify(f"Archive failed: {exc}", severity="error")
                 return
             try:
-                self.query_one(ThreadListWidget).reload()
+                await self.query_one(ThreadListWidget).reload()
             except Exception as exc:
                 log.warning("action_archive: reload failed: %s", exc)
 
@@ -144,7 +144,7 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
                         exc,
                     )
             try:
-                self.query_one(ThreadListWidget).reload()
+                await self.query_one(ThreadListWidget).reload()
             except Exception as exc:
                 log.warning("action_archive (bundle): reload failed: %s", exc)
             self.notify(f"Archived {count} threads from {row.bundle.name}")

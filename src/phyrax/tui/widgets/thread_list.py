@@ -217,9 +217,9 @@ class ThreadListWidget(Widget):
         self._config = config
         self._rows: list[ListRow] = []
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         self._load_rows()
-        self._rebuild_list()
+        await self._rebuild_list()
 
     # ---------------------------------------------------------------------------
     # Row construction
@@ -279,16 +279,23 @@ class ThreadListWidget(Widget):
             return BundleHeaderItem(row)
         return ThreadRowItem(row)
 
-    def _rebuild_list(self) -> None:
-        """Replace ListView contents with the current _rows."""
+    async def _rebuild_list(self) -> None:
+        """Replace ListView contents with the current _rows.
+
+        DOM mutations (clear/append) are awaited so that lv.index is set only
+        after all ListItems are mounted and validate_index has non-empty nodes
+        to clamp against. Without this, lv.index collapses to None because
+        _nodes is empty at validation time, which causes ListView.highlighted_child
+        to return None and silently swallow Enter key presses.
+        """
         try:
             lv = self.query_one(ListView)
         except Exception:
             return
-        lv.clear()
+        await lv.clear()
         for row in self._rows:
-            lv.append(self._make_list_item(row))
-        # Sync ListView's internal cursor to ours.
+            await lv.append(self._make_list_item(row))
+        # Sync ListView's internal cursor to ours — nodes are now mounted.
         if self._rows:
             lv.index = min(self.cursor, len(self._rows) - 1)
 
@@ -364,10 +371,10 @@ class ThreadListWidget(Widget):
     # Public API
     # ---------------------------------------------------------------------------
 
-    def reload(self) -> None:
+    async def reload(self) -> None:
         """Re-query the database and refresh the displayed rows."""
         self._load_rows()
-        self._rebuild_list()
+        await self._rebuild_list()
         # Clamp cursor in case rows shrank.
         if self._rows:
             self.cursor = min(self.cursor, len(self._rows) - 1)

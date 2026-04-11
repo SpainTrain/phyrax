@@ -72,7 +72,7 @@ class BundleFocusScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is 
         yield _BundleThreadListWidget(self._db, self._config, self._bundle)
         yield StatusBar(screen_name=self._bundle.name)
 
-    def action_archive_bundle(self) -> None:
+    async def action_archive_bundle(self) -> None:
         """Archive every thread in this bundle (remove 'inbox' tag from all threads)."""
         query = f"tag:{self._bundle.label} AND tag:inbox"
         try:
@@ -95,7 +95,7 @@ class BundleFocusScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is 
                 )
 
         try:
-            self.query_one(_BundleThreadListWidget).reload()
+            await self.query_one(_BundleThreadListWidget).reload()
         except Exception as exc:
             log.warning("BundleFocusScreen: reload after archive failed: %s", exc)
 

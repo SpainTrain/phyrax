@@ -94,6 +94,36 @@ async def test_enter_on_thread_pushes_thread_view(tmp_maildir: MaildirFixture) -
 
 
 @pytest.mark.asyncio
+async def test_enter_key_press_pushes_thread_view(tmp_maildir: MaildirFixture) -> None:
+    """Pressing the Enter key in the inbox must push ThreadViewScreen.
+
+    This is a regression test for phyrax-d4r: the ListView index was set
+    synchronously before DOM nodes were mounted, collapsing to None and causing
+    ListView.action_select_cursor to silently do nothing.
+    """
+    db = _make_db(tmp_maildir)
+    config = PhyraxConfig(bundles=[])
+    app = _InboxApp(db, config)
+
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        assert isinstance(app.screen, InboxScreen)
+
+        # Press Enter — this exercises the full key-dispatch path through
+        # ListView.action_select_cursor -> ListView.Selected ->
+        # ThreadListWidget.on_list_view_selected -> ThreadSelected ->
+        # InboxScreen.on_thread_list_widget_thread_selected.
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert isinstance(app.screen, ThreadViewScreen), (
+            f"Expected ThreadViewScreen after pressing Enter; got {type(app.screen).__name__}"
+        )
+
+    db.close()
+
+
+@pytest.mark.asyncio
 async def test_thread_view_shows_correct_messages(tmp_maildir: MaildirFixture) -> None:
     """ThreadViewScreen opened from InboxScreen displays the selected thread's messages."""
     db = _make_db(tmp_maildir)
