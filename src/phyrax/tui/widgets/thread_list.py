@@ -107,6 +107,12 @@ def _tag_pills(tags: frozenset[str]) -> str:
 # ---------------------------------------------------------------------------
 
 _THREAD_ROW_CSS = """
+ThreadListWidget {
+    height: 1fr;
+}
+ThreadListWidget > ListView {
+    height: 1fr;
+}
 ThreadRowItem {
     height: 1;
     padding: 0 1;

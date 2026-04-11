@@ -45,8 +45,8 @@ class InboxScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generi
     # system show sensible defaults. Action handlers still look up config.keys
     # at runtime, so user overrides take effect (subject to re-mount).
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("q", "quit", "Quit"),
-        Binding("enter", "select", "Open"),
+        Binding("q", "quit", "Quit", priority=True),
+        Binding("enter", "select", "Open", priority=True),
         Binding("a", "archive", "Archive"),
         Binding("r", "reply", "Reply"),
         Binding("t", "task_action", "Task"),
