@@ -79,6 +79,29 @@ These are the defaults. All keys are configurable via `config.json` (`config.key
 | `?` | Open AI mailbox chat |
 | `q` | Quit |
 
+## Development
+
+```bash
+# Install dependencies
+uv sync
+
+# Try the app safely (fixture mailbox, no real email touched)
+uv run phr --demo
+
+# Run the real TUI (requires notmuch + lieer set up)
+uv run phr
+
+# Run tests
+uv run pytest
+
+# Lint, format, type-check
+uv run ruff check --fix src/ tests/
+uv run ruff format src/ tests/
+uv run mypy src/phyrax/
+```
+
+`phr --demo` creates an isolated temp directory with synthetic emails and runs the full FTUX wizard — safe for iterating on the TUI without touching your real mailbox.
+
 ## Further Reading
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system design, data flow, agent security model
