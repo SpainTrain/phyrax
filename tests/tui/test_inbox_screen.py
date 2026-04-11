@@ -120,8 +120,9 @@ async def test_inbox_shows_expected_thread_count(tmp_maildir: MaildirFixture) ->
 
         widget = inbox.query_one(ThreadListWidget)
         thread_rows = [r for r in widget._rows if isinstance(r, ThreadRow)]
-        # The fixture has 5 threads: alerts, newsletters, boss, docs, friend.
-        assert len(thread_rows) == 5, f"Expected 5 thread rows; got {len(thread_rows)}"
+        # The fixture has 10 threads: alerts, newsletters, boss, docs, friend,
+        # github, notion, recruiter, alice, stripe.
+        assert len(thread_rows) == 10, f"Expected 10 thread rows; got {len(thread_rows)}"
 
     db.close()
 

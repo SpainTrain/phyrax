@@ -2,7 +2,7 @@
 
 Three core fixtures:
 - tmp_config_dir: XDG-like temp dir tree with a minimal valid config.json
-- tmp_maildir: synthetic Maildir with 5 threads / 20 messages, notmuch-indexed
+- tmp_maildir: synthetic Maildir with 10 threads / 29 messages, notmuch-indexed
 - mock_agent_command: path to a shell script that echoes its stdin back
 """
 
@@ -51,7 +51,7 @@ def tmp_config_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def tmp_maildir(tmp_path: Path) -> MaildirFixture:
-    """Return a synthetic Maildir fixture with 5 threads / 20 messages.
+    """Return a synthetic Maildir fixture with 10 threads / 29 messages.
 
     Builds the Maildir under *tmp_path*, runs ``notmuch new`` to index
     it, and applies bundle tags (+alerts, +newsletters).  Returns a

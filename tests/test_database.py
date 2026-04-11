@@ -41,10 +41,10 @@ def _bare_id(full_thread_id: str) -> str:
 def test_query_threads_returns_all_inbox(
     tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """query_threads('tag:inbox') must return all 5 fixture threads."""
+    """query_threads('tag:inbox') must return all 10 fixture threads."""
     with _open_db(tmp_maildir, monkeypatch) as db:
         results = db.query_threads("tag:inbox")
-    assert len(results) == 5
+    assert len(results) == 10
 
 
 def test_query_threads_returns_thread_summaries(
@@ -84,9 +84,9 @@ def test_count_threads_matches_query_threads_length(
 def test_count_threads_tag_alerts(
     tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """count_threads('tag:alerts') must return 1 (only the alerts thread)."""
+    """count_threads('tag:alerts') must return 2 (alerts and stripe threads)."""
     with _open_db(tmp_maildir, monkeypatch) as db:
-        assert db.count_threads("tag:alerts") == 1
+        assert db.count_threads("tag:alerts") == 2
 
 
 # ---------------------------------------------------------------------------
@@ -260,8 +260,8 @@ def test_remove_tags_does_not_affect_other_threads(
         db.remove_tags(newsletters_thread_id, ["inbox"])
         remaining = db.query_threads("tag:inbox")
 
-    # 5 threads total; 1 had inbox removed → 4 remain
-    assert len(remaining) == 4
+    # 10 threads total; 1 had inbox removed → 9 remain
+    assert len(remaining) == 9
 
 
 def test_remove_nonexistent_tag_is_safe(

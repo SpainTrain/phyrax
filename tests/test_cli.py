@@ -125,14 +125,14 @@ def test_status_inbox_total_matches_fixture(
     patched_env: dict[str, Any],
     tmp_maildir: MaildirFixture,
 ) -> None:
-    """phr status inbox_total must equal 5 (the full fixture maildir)."""
+    """phr status inbox_total must equal 10 (the full fixture maildir)."""
     cfg = _make_config(tmp_maildir)
     with patch("phyrax.cli.PhyraxConfig") as mock_cls:
         mock_cls.load.return_value = cfg
         result = runner.invoke(app, ["status"])
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
-    assert data["inbox_total"] == 5
+    assert data["inbox_total"] == 10
 
 
 def test_status_bundle_entries_match_config(
@@ -196,7 +196,7 @@ def test_list_default_returns_inbox_threads(
     patched_env: dict[str, Any],
     tmp_maildir: MaildirFixture,
 ) -> None:
-    """phr list (no args) must return exactly 5 inbox threads from the fixture."""
+    """phr list (no args) must return exactly 10 inbox threads from the fixture."""
     cfg = _make_config(tmp_maildir)
     with patch("phyrax.cli.PhyraxConfig") as mock_cls:
         mock_cls.load.return_value = cfg
@@ -204,7 +204,7 @@ def test_list_default_returns_inbox_threads(
     assert result.exit_code == 0, result.output
     threads = json.loads(result.output)
     assert isinstance(threads, list)
-    assert len(threads) == 5
+    assert len(threads) == 10
 
 
 def test_list_thread_object_schema(
@@ -259,15 +259,16 @@ def test_list_bundle_newsletters_returns_one_thread(
     patched_env: dict[str, Any],
     tmp_maildir: MaildirFixture,
 ) -> None:
-    """phr list --bundle=Newsletters must return only the newsletters thread."""
+    """phr list --bundle=Newsletters must return all newsletters-tagged threads."""
     cfg = _make_config(tmp_maildir, bundles=[_newsletters_bundle()])
     with patch("phyrax.cli.PhyraxConfig") as mock_cls:
         mock_cls.load.return_value = cfg
         result = runner.invoke(app, ["list", "--bundle=Newsletters"])
     assert result.exit_code == 0, result.output
     threads = json.loads(result.output)
-    assert len(threads) == 1
-    assert "newsletters" in threads[0]["tags"]
+    # Fixture has 2 newsletters threads: newsletter@substack.com and noreply@notion.so
+    assert len(threads) == 2
+    assert all("newsletters" in t["tags"] for t in threads)
 
 
 def test_list_bundle_unknown_exits_1(
@@ -286,15 +287,16 @@ def test_list_query_override(
     patched_env: dict[str, Any],
     tmp_maildir: MaildirFixture,
 ) -> None:
-    """phr list --query='tag:alerts' must return only the alerts thread."""
+    """phr list --query='tag:alerts' must return all alerts-tagged threads."""
     cfg = _make_config(tmp_maildir)
     with patch("phyrax.cli.PhyraxConfig") as mock_cls:
         mock_cls.load.return_value = cfg
         result = runner.invoke(app, ["list", "--query=tag:alerts"])
     assert result.exit_code == 0, result.output
     threads = json.loads(result.output)
-    assert len(threads) == 1
-    assert "alerts" in threads[0]["tags"]
+    # Fixture has 2 alerts threads: alerts@example.com and support@stripe.com
+    assert len(threads) == 2
+    assert all("alerts" in t["tags"] for t in threads)
 
 
 # ---------------------------------------------------------------------------
