@@ -57,7 +57,7 @@ class BundleFocusScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is 
     """
 
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("escape", "pop_screen", "Back"),
+        Binding("escape", "app.pop_screen", "Back"),
         Binding("a", "archive_bundle", "Archive bundle", show=False),
     ]
 
@@ -71,6 +71,15 @@ class BundleFocusScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is 
         yield Label(f"[{self._bundle.name}]", id="bundle-title")
         yield _BundleThreadListWidget(self._db, self._config, self._bundle)
         yield StatusBar(screen_name=self._bundle.name)
+
+    def _key_escape(self) -> None:
+        """Pop back to InboxScreen when Escape is pressed.
+
+        Screen._key_escape only calls clear_selection(), which swallows the key
+        without triggering the ``escape → app.pop_screen`` binding. Override it
+        here to perform the navigation instead.
+        """
+        self.app.pop_screen()
 
     async def action_archive_bundle(self) -> None:
         """Archive every thread in this bundle (remove 'inbox' tag from all threads)."""
