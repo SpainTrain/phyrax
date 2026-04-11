@@ -16,6 +16,7 @@ The `.claude/rules/` directory contains topic-specific, actionable rules for all
 | `.claude/rules/database.md` | notmuch sole-importer constraint, tag mutation safety, test fixture setup, snippet formatting |
 | `.claude/rules/tui.md` | Subprocess suspension before $EDITOR/agent, keybinding config sourcing, Textual pilot tests, network isolation |
 | `.claude/rules/config.md` | Sole write path via `PhyraxConfig.save()`, `is_first_run` semantics, platformdirs usage, validation error handling |
+| `.claude/rules/devtools.md` | textual-dev usage, dev tooling conventions |
 
 **When implementing a new epic**, add topic rules to `.claude/rules/` for patterns discovered during implementation. Rules must be actionable (what to do or not do) — not aspirational. Avoid "prefer X" or "consider Y"; write "always X" or "never Y".
 

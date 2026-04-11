@@ -45,6 +45,7 @@ dev = [
     "pytest-textual-snapshot>=0.4",
     "mypy>=1.10",
     "ruff>=0.5",
+    "textual-dev>=0.1",
 ]
 
 [tool.ruff]
