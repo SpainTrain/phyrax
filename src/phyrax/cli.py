@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import contextlib
 import os
+import sys
 from collections.abc import Generator
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -18,6 +20,74 @@ app = typer.Typer(
     help="Phyrax: a keyboard-first, AI-assisted terminal email client.",
     no_args_is_help=False,
 )
+
+
+def _run_demo() -> None:
+    """Create a sandboxed temp mailbox and re-exec phr with FTUX enabled.
+
+    - Builds a fixture Maildir (5 threads / 20 messages) under a fresh tempdir.
+    - Sets XDG env vars so phyrax uses the tempdir exclusively.
+    - Does NOT write config.json — FTUX wizard will run on first launch.
+    - Replaces the current process with phr via os.execve.
+    """
+    import shutil
+    import tempfile
+
+    # Locate tests/fixtures so we can import build_maildir.
+    # The maildir builder lives in tests/ which is not installed as a package.
+    _repo_root = Path(__file__).parent.parent.parent.parent  # src/phyrax/cli.py → repo root
+    tests_dir = _repo_root / "tests"
+    if str(tests_dir) not in sys.path:
+        sys.path.insert(0, str(tests_dir))
+
+    try:
+        from fixtures.maildir_builder import (  # type: ignore[import-not-found]  # tests/ dir added to sys.path at runtime; not installed
+            build_maildir,
+        )
+    except ImportError as exc:
+        typer.echo(
+            f"Error: could not import maildir builder from {tests_dir}: {exc}",
+            err=True,
+        )
+        typer.echo("Run 'phr --demo' from inside the Phyrax repo checkout.", err=True)
+        raise typer.Exit(1) from exc
+
+    tmp = tempfile.mkdtemp(prefix="phyrax-demo-")
+    root = Path(tmp)
+
+    typer.echo(f"Demo directory: {root}")
+    typer.echo("Building fixture mailbox (5 threads / 20 messages)...")
+
+    fixture = build_maildir(root)
+
+    typer.echo(f"  Maildir:         {fixture.maildir}")
+    typer.echo(f"  NOTMUCH_CONFIG:  {fixture.notmuch_config}")
+    typer.echo(f"  Threads indexed: {len(fixture.thread_ids)}")
+
+    # Set XDG dirs so phyrax uses the temp tree for all state.
+    # Intentionally omit writing config.json so that FTUX runs.
+    env = os.environ.copy()
+    env["NOTMUCH_CONFIG"] = str(fixture.notmuch_config)
+    env["XDG_CONFIG_HOME"] = str(root / "config")
+    env["XDG_CACHE_HOME"] = str(root / "cache")
+    env["XDG_STATE_HOME"] = str(root / "state")
+    env["PHYRAX_LOG_LEVEL"] = "DEBUG"
+
+    typer.echo("")
+    typer.echo("Starting phr... (press 'q' to quit)")
+    typer.echo("")
+
+    # Locate the phr binary: prefer .venv in repo root (dev install), then PATH.
+    phr = _repo_root / ".venv" / "bin" / "phr"
+    if not phr.exists():
+        found = shutil.which("phr")
+        if found:
+            phr = Path(found)
+        else:
+            typer.echo("ERROR: 'phr' not found. Run 'uv sync' first.", err=True)
+            raise typer.Exit(1)
+
+    os.execve(str(phr), [str(phr)], env)
 
 
 @contextlib.contextmanager
@@ -37,11 +107,24 @@ def _write_lock() -> Generator[None, None, None]:
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context) -> None:
+def main(
+    ctx: typer.Context,
+    demo: bool = typer.Option(
+        False,
+        "--demo/--no-demo",
+        help=(
+            "Sandbox mode: seed a fixture mailbox in a temp dir, "
+            "set XDG env vars, and launch the full TUI with FTUX."
+        ),
+    ),
+) -> None:
     """Launch the Phyrax TUI, or run a headless subcommand."""
     from phyrax.logging import setup_logging
 
     setup_logging()
+    if demo:
+        _run_demo()
+        return  # unreachable: _run_demo calls os.execve or raises
     if ctx.invoked_subcommand is None:
         run_app()
 
