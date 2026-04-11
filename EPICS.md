@@ -560,3 +560,13 @@ Each issue is sized for a single focused session. Dependencies are explicit — 
 **Files**: `pyproject.toml` (metadata), `LICENSE`
 **Acceptance Criteria**:
 - `uv build` produces wheel and sdist
+
+### E11-5: ZFC Guardrails & Audit
+**Depends on**: E6-1, E8-2, E3-3
+**Files**: `CLAUDE.md`, `src/phyrax/bundler.py`, `src/phyrax/actions/engine.py`, `src/phyrax/agent.py`, `tests/test_agent.py`
+**Acceptance Criteria**:
+- ZFC (Zero Framework Cognition) rule documented in `CLAUDE.md`: Phyrax is a deterministic orchestrator; all reasoning must go through the external AI agent subprocess; client-side heuristics (regex guessing, keyword lists, string-matching agent output) are prohibited violations (done via phyrax-x9s)
+- Audit `bundler.py` for client-side heuristics: any pattern-matching or inference that should be delegated to the agent subprocess is removed or replaced with agent calls
+- Audit `actions/engine.py` for client-side heuristics: template selection logic must not guess intent; the agent decides
+- All structured agent outputs (e.g., `BundleRule` JSON from `generate_bundle_rule()`) are validated via Pydantic schema immediately after parsing; raw agent output that fails schema validation raises `AgentError` with the raw output included
+- Regression test in `tests/test_agent.py`: `run_agent()` in captured mode raises `AgentError` (not silently returns) when the agent subprocess produces unstructured output where structured output is required
