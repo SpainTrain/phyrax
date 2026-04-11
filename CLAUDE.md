@@ -198,6 +198,8 @@ The harness spawns the app in a detached tmux session against a synthetic fixtur
 
 7. **Draft crash recovery**: Every draft is saved to `~/.cache/phyrax/drafts/{uuid}.txt` before opening $EDITOR. On startup, scan for orphaned drafts and prompt the user.
 
+8. **Zero Framework Cognition (ZFC)**: Phyrax is a deterministic orchestrator. All reasoning, categorization, and intent-parsing must go through the external AI agent subprocess — never through in-process heuristics. Violations include regex/keyword guessing for semantic tasks (e.g., `if "newsletter" in subject`), keyword-scanning of agent stdout (e.g., `if "success" in output`), and hardcoded category lists substituting for LLM calls. Non-violations include matching user-authored `BundleRule` triples from `config.json`, parsing notmuch/MIME/date output, system-tag filtering, and exit-code branching on subprocess results.
+
 ## Implementation Sequence
 
 Work through epics in this order (see `EPICS.md` for full issue breakdown):
