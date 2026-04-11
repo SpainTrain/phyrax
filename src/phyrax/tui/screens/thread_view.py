@@ -1,8 +1,11 @@
 """ThreadViewScreen — single-thread message reader.
 
-Displays all messages chronologically. HTML-only messages are converted via
-html2text for display. Reply (r) is always anchored to the newest message.
-ctrl+g opens the thread in Gmail web UI.
+Displays all messages chronologically in a two-pane layout:
+- Top: ListView with one item per message (From | Date header summary).
+- Bottom: VerticalScroll detail pane showing the full body of the selected message.
+
+HTML-only messages are converted via html2text for display. Reply (r) is always
+anchored to the newest message. ctrl+g opens the thread in Gmail web UI.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Static
+from textual.widgets import ListItem, ListView, Static
 
 from phyrax.config import DRAFTS_DIR, PhyraxConfig
 from phyrax.database import Database
@@ -101,8 +104,36 @@ def _build_message_text(msg: MessageDetail, thread_subject: str) -> str:
     return "\n".join(parts)
 
 
+def _message_summary(msg: MessageDetail) -> str:
+    """One-line summary for the ListView header row: From | Date | snippet."""
+    date_str = _format_date(msg.date)
+    body = _body_text(msg)
+    snippet = body.strip().replace("\n", " ")[:60]
+    return f"{msg.from_}  |  {date_str}  |  {snippet}"
+
+
 class ThreadViewScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is generic at runtime
-    """Screen that renders every message in a thread chronologically."""
+    """Screen that renders every message in a thread as a navigable list.
+
+    The upper pane is a ListView with one item per message showing a brief
+    header summary.  The lower detail pane shows the full body of whichever
+    message is currently highlighted.
+    """
+
+    DEFAULT_CSS = """
+    ThreadViewScreen {
+        layout: vertical;
+    }
+
+    #message-list {
+        height: 30%;
+        border-bottom: solid $accent;
+    }
+
+    #message-detail {
+        height: 1fr;
+    }
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "pop_screen", "Back"),
@@ -117,22 +148,53 @@ class ThreadViewScreen(Screen):  # type: ignore[type-arg]  # Textual Screen is g
         self._config = config
         self._messages: list[MessageDetail] = []
 
+    def _key_escape(self) -> None:
+        """Pop back to the previous screen when Escape is pressed.
+
+        Screen._key_escape only calls clear_selection(), which swallows the key
+        without triggering the ``escape → pop_screen`` binding. Override it
+        here to perform the navigation instead.
+        """
+        self.app.pop_screen()
+
     def compose(self) -> ComposeResult:
-        yield VerticalScroll(id="message-container")
+        yield ListView(id="message-list")
+        yield VerticalScroll(id="message-detail")
         yield StatusBar(screen_name="thread")
 
     def on_mount(self) -> None:
-        """Load messages from the database and render them."""
+        """Load messages from the database and populate the list."""
         self._messages = self._db.get_thread_messages(self._thread.thread_id)
-        self._render_messages()
+        self._populate_list()
 
-    def _render_messages(self) -> None:
-        """Mount one Static widget per message into the scroll container."""
-        container = self.query_one("#message-container", VerticalScroll)
-        container.remove_children()
+    def _populate_list(self) -> None:
+        """Add one ListItem per message to the ListView."""
+        lv = self.query_one("#message-list", ListView)
+        lv.clear()
         for msg in self._messages:
-            text = _build_message_text(msg, self._thread.subject)
-            container.mount(Static(text, classes="message-block"))
+            lv.append(ListItem(Static(_message_summary(msg))))
+        if self._messages:
+            # Show the first message in the detail pane on mount.
+            self._show_detail(0)
+
+    def _show_detail(self, index: int) -> None:
+        """Render the full body of message at *index* into the detail pane."""
+        if not (0 <= index < len(self._messages)):
+            return
+        msg = self._messages[index]
+        text = _build_message_text(msg, self._thread.subject)
+        detail = self.query_one("#message-detail", VerticalScroll)
+        detail.remove_children()
+        detail.mount(Static(text, classes="message-block"))
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Update the detail pane when the ListView cursor moves."""
+        if event.item is None:
+            return
+        lv = self.query_one("#message-list", ListView)
+        index = lv.index
+        if index is not None:
+            self._show_detail(index)
 
     async def action_reply(self) -> None:
         """Open ComposeModal for the newest message, then save and edit the draft."""
