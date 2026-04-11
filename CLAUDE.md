@@ -143,9 +143,44 @@ uv run mypy src/phyrax/
 ### Testing
 
 - Every public function gets a test.
-- TUI tests use Textual's `pilot` fixture (app.run_test).
 - Mock the AI agent subprocess — never call a real LLM in tests.
-- Use a fixture Maildir (see `tests/conftest.py`) for database tests. Never use a real mailbox.
+- Use a fixture Maildir (see `tests/conftest.py`) for database tests. **Never use a real mailbox** — not in tests, not in the harness, not anywhere.
+
+#### TUI Testing Pyramid
+
+There are two complementary layers for TUI testing. Both are mandatory.
+
+**Layer 1 — Automated E2E (CI/CD assurance) via `pytest` + Textual Pilot:**
+
+- Every new screen and every non-trivial widget must have an `async` test using `app.run_test()`.
+- Tests simulate user flows via `await pilot.press("j", "enter")` and assert app state via `app.query_one(SomeWidget)`.
+- Snapshot tests (`pytest-textual-snapshot`) catch visual regressions: use `assert_matches_snapshot(pilot)` to lock a known-good render. First run creates the snapshot; subsequent runs compare.
+- Run the full suite: `uv run pytest tests/tui/ -v`
+
+```python
+async def test_inbox_renders(tmp_maildir, tmp_config_dir):
+    async with PhyraxApp(...).run_test(size=(200, 50)) as pilot:
+        await pilot.pause()
+        assert pilot.app.query_one(ThreadListWidget)
+        await pilot.app.assert_matches_snapshot()
+```
+
+**Layer 2 — Interactive verification via `scripts/tui_harness.sh` (tmux bridge):**
+
+The harness spawns the app in a detached tmux session against a synthetic fixture mailbox (with config pre-written to skip FTUX), then lets you send keystrokes and read the rendered terminal output.
+
+```bash
+./scripts/tui_harness.sh start          # start session with fixture mailbox
+./scripts/tui_harness.sh keys j j Enter # navigate and press Enter
+./scripts/tui_harness.sh read           # capture + print pane text
+./scripts/tui_harness.sh stop           # kill session + clean up temp dir
+```
+
+**MANDATORY RULE:** Whenever you modify any file under `src/phyrax/tui/` or attempt to fix a UI bug, you MUST verify the fix interactively using `./scripts/tui_harness.sh` before marking the task complete. Run `start`, send the relevant keystrokes, run `read`, and include the captured pane output in your response as proof that the modal appeared, the text changed, or the layout did not crash.
+
+**Pyramid Separation:**
+- `pytest` + Pilot → automated, deterministic, runs in CI, no terminal needed
+- `tui_harness.sh` → interactive, human-readable output, used during development and bug verification
 
 ## Key Architectural Rules
 
