@@ -27,6 +27,7 @@ def _make_config() -> PhyraxConfig:
     """Return a minimal PhyraxConfig for tests."""
     return PhyraxConfig()
 
+
 # ---------------------------------------------------------------------------
 # Minimal host app for screen-push tests
 # ---------------------------------------------------------------------------

@@ -194,9 +194,7 @@ def test_get_thread_messages_unknown_thread_returns_empty(
 # ---------------------------------------------------------------------------
 
 
-def test_add_tags_persists(
-    tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_add_tags_persists(tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     """After add_tags, the thread must appear in a query for that tag."""
     friend_thread_id = _bare_id(tmp_maildir.thread_ids["friend"])
     monkeypatch.setenv("NOTMUCH_CONFIG", str(tmp_maildir.notmuch_config))
@@ -234,9 +232,7 @@ def test_add_tags_visible_in_thread_summary(
 # ---------------------------------------------------------------------------
 
 
-def test_remove_tags_persists(
-    tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_remove_tags_persists(tmp_maildir: MaildirFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     """After remove_tags('inbox'), the thread must not appear in tag:inbox."""
     newsletters_thread_id = _bare_id(tmp_maildir.thread_ids["newsletters"])
     monkeypatch.setenv("NOTMUCH_CONFIG", str(tmp_maildir.notmuch_config))
@@ -318,9 +314,7 @@ def test_get_attachment_content_starts_with_pdf_magic(
         msg = messages[0]
         content = db.get_attachment_content(msg.message_id, "document.pdf")
 
-    assert content.startswith(b"%PDF"), (
-        f"Expected PDF magic bytes, got: {content[:8]!r}"
-    )
+    assert content.startswith(b"%PDF"), f"Expected PDF magic bytes, got: {content[:8]!r}"
 
 
 def test_get_attachment_content_wrong_filename_raises(

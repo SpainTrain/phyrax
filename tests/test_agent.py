@@ -298,9 +298,7 @@ def test_run_agent_captured_mode_returns_agent_result(
     assert result.returncode == 0
 
 
-def test_run_agent_captured_mode_is_default(
-    tmp_path: Path, mock_agent_command: str
-) -> None:
+def test_run_agent_captured_mode_is_default(tmp_path: Path, mock_agent_command: str) -> None:
     """run_agent defaults to RunMode.CAPTURED (no mode arg needed)."""
     prompt_path = tmp_path / "prompt.txt"
     prompt_path.write_text("data")

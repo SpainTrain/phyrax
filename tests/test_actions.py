@@ -278,12 +278,15 @@ def test_execute_action_passes_require_full_context_to_compile_prompt(
     tmp_prompt_path = Path(tmp_prompt)
 
     try:
-        with patch(
-            "phyrax.actions.engine._agent.compile_prompt",
-            return_value=tmp_prompt_path,
-        ) as mock_compile, patch(
-            "phyrax.actions.engine._agent.run_agent_interactive",
-            return_value=0,
+        with (
+            patch(
+                "phyrax.actions.engine._agent.compile_prompt",
+                return_value=tmp_prompt_path,
+            ) as mock_compile,
+            patch(
+                "phyrax.actions.engine._agent.run_agent_interactive",
+                return_value=0,
+            ),
         ):
             execute_action(template, msg, config)
 
@@ -313,12 +316,15 @@ def test_execute_action_passes_allow_attachments_to_compile_prompt(
     tmp_prompt_path = Path(tmp_prompt)
 
     try:
-        with patch(
-            "phyrax.actions.engine._agent.compile_prompt",
-            return_value=tmp_prompt_path,
-        ) as mock_compile, patch(
-            "phyrax.actions.engine._agent.run_agent_interactive",
-            return_value=0,
+        with (
+            patch(
+                "phyrax.actions.engine._agent.compile_prompt",
+                return_value=tmp_prompt_path,
+            ) as mock_compile,
+            patch(
+                "phyrax.actions.engine._agent.run_agent_interactive",
+                return_value=0,
+            ),
         ):
             execute_action(template, msg, config)
 
@@ -348,12 +354,15 @@ def test_execute_action_passes_prompt_body_to_compile_prompt(
     tmp_prompt_path = Path(tmp_prompt)
 
     try:
-        with patch(
-            "phyrax.actions.engine._agent.compile_prompt",
-            return_value=tmp_prompt_path,
-        ) as mock_compile, patch(
-            "phyrax.actions.engine._agent.run_agent_interactive",
-            return_value=0,
+        with (
+            patch(
+                "phyrax.actions.engine._agent.compile_prompt",
+                return_value=tmp_prompt_path,
+            ) as mock_compile,
+            patch(
+                "phyrax.actions.engine._agent.run_agent_interactive",
+                return_value=0,
+            ),
         ):
             execute_action(template, msg, config)
 
@@ -385,12 +394,15 @@ def test_execute_action_returns_exit_code_zero(tmp_path: Path) -> None:
     tmp_prompt_path = Path(tmp_prompt)
 
     try:
-        with patch(
-            "phyrax.actions.engine._agent.compile_prompt",
-            return_value=tmp_prompt_path,
-        ), patch(
-            "phyrax.actions.engine._agent.run_agent_interactive",
-            return_value=0,
+        with (
+            patch(
+                "phyrax.actions.engine._agent.compile_prompt",
+                return_value=tmp_prompt_path,
+            ),
+            patch(
+                "phyrax.actions.engine._agent.run_agent_interactive",
+                return_value=0,
+            ),
         ):
             result = execute_action(template, msg, config)
     finally:
@@ -419,12 +431,15 @@ def test_execute_action_returns_agent_exit_code_nonzero_not_raised(
     tmp_prompt_path = Path(tmp_prompt)
 
     try:
-        with patch(
-            "phyrax.actions.engine._agent.compile_prompt",
-            return_value=tmp_prompt_path,
-        ), patch(
-            "phyrax.actions.engine._agent.run_agent_interactive",
-            return_value=2,
+        with (
+            patch(
+                "phyrax.actions.engine._agent.compile_prompt",
+                return_value=tmp_prompt_path,
+            ),
+            patch(
+                "phyrax.actions.engine._agent.run_agent_interactive",
+                return_value=2,
+            ),
         ):
             result = execute_action(template, msg, config)
     finally:
@@ -459,13 +474,17 @@ def test_execute_action_cleans_up_temp_file_on_agent_error(
     tmp_prompt_path = Path(tmp_prompt)
     assert tmp_prompt_path.exists(), "Precondition: temp file must exist before the call"
 
-    with patch(
-        "phyrax.actions.engine._agent.compile_prompt",
-        return_value=tmp_prompt_path,
-    ), patch(
-        "phyrax.actions.engine._agent.run_agent_interactive",
-        side_effect=AgentError("agent died"),
-    ), pytest.raises(AgentError):
+    with (
+        patch(
+            "phyrax.actions.engine._agent.compile_prompt",
+            return_value=tmp_prompt_path,
+        ),
+        patch(
+            "phyrax.actions.engine._agent.run_agent_interactive",
+            side_effect=AgentError("agent died"),
+        ),
+        pytest.raises(AgentError),
+    ):
         execute_action(template, msg, config)
 
     assert not tmp_prompt_path.exists(), "Temp prompt file must be deleted after AgentError"
@@ -490,12 +509,15 @@ def test_execute_action_cleans_up_temp_file_on_success(
     os.close(fd)
     tmp_prompt_path = Path(tmp_prompt)
 
-    with patch(
-        "phyrax.actions.engine._agent.compile_prompt",
-        return_value=tmp_prompt_path,
-    ), patch(
-        "phyrax.actions.engine._agent.run_agent_interactive",
-        return_value=0,
+    with (
+        patch(
+            "phyrax.actions.engine._agent.compile_prompt",
+            return_value=tmp_prompt_path,
+        ),
+        patch(
+            "phyrax.actions.engine._agent.run_agent_interactive",
+            return_value=0,
+        ),
     ):
         execute_action(template, msg, config)
 

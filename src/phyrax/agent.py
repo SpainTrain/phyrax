@@ -73,9 +73,7 @@ def _build_email_payload_text(
     lines: list[str] = []
 
     # Only the six permitted headers are included.
-    date_str = datetime.fromtimestamp(message.date, tz=UTC).strftime(
-        "%a, %d %b %Y %H:%M:%S +0000"
-    )
+    date_str = datetime.fromtimestamp(message.date, tz=UTC).strftime("%a, %d %b %Y %H:%M:%S +0000")
     header_map = {
         "From": message.from_,
         "To": ", ".join(message.to),
@@ -244,8 +242,7 @@ def run_agent(
             return fallback_result
 
         raise AgentError(
-            f"Agent command exited with code {result.returncode}. "
-            f"stderr: {result.stderr!r}"
+            f"Agent command exited with code {result.returncode}. stderr: {result.stderr!r}"
         )
 
     return result
@@ -282,13 +279,10 @@ def run_agent_interactive(
             fb_code = _run_interactive(fallback_argv)
             if fb_code != 0:
                 raise AgentError(
-                    f"Primary agent command exited {exit_code} and "
-                    f"fallback exited {fb_code}."
+                    f"Primary agent command exited {exit_code} and fallback exited {fb_code}."
                 )
             return fb_code
 
-        raise AgentError(
-            f"Agent command exited with code {exit_code}."
-        )
+        raise AgentError(f"Agent command exited with code {exit_code}.")
 
     return exit_code

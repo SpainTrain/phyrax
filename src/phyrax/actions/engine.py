@@ -54,9 +54,7 @@ def _parse_frontmatter(text: str, source: Path) -> ActionTemplate | None:
 
     parts = rest.split("\n---", maxsplit=1)
     if len(parts) < 2:
-        _log.warning(
-            "action template %s frontmatter is not closed — skipping", source
-        )
+        _log.warning("action template %s frontmatter is not closed — skipping", source)
         return None
 
     fm_block, body_block = parts
@@ -108,15 +106,11 @@ def _parse_frontmatter(text: str, source: Path) -> ActionTemplate | None:
     description = parsed["description"]
 
     if not isinstance(name, str) or not name:
-        _log.warning(
-            "action template %s has invalid 'name' field — skipping", source
-        )
+        _log.warning("action template %s has invalid 'name' field — skipping", source)
         return None
 
     if not isinstance(description, str) or not description:
-        _log.warning(
-            "action template %s has invalid 'description' field — skipping", source
-        )
+        _log.warning("action template %s has invalid 'description' field — skipping", source)
         return None
 
     require_full_context = parsed.get("require_full_context", False)
