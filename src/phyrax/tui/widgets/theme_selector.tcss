@@ -1,0 +1,17 @@
+ThemeSelector {
+    align: center middle;
+}
+
+#theme-panel {
+    width: 50;
+    height: auto;
+    max-height: 24;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+
+#title {
+    text-style: bold;
+    margin-bottom: 1;
+}
