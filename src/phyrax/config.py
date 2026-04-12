@@ -78,6 +78,7 @@ class DisplayConfig(BaseModel):
     date_format: str = "relative"
     thread_preview_lines: int = 2
     bundle_collapsed_default: bool = True
+    theme: str = "textual-dark"
 
 
 _DEFAULT_KEYS: dict[str, str] = {

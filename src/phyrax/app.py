@@ -59,6 +59,17 @@ class PhyraxApp(App):  # type: ignore[type-arg]  # Textual App is generic at run
         # 2. Load config.
         self._config = PhyraxConfig.load()
 
+        # 2a. Apply theme from config.
+        configured_theme = self._config.display.theme
+        if configured_theme in self.available_themes:
+            self.theme = configured_theme
+        else:
+            log.warning(
+                "Unknown theme %r in config; falling back to textual-dark",
+                configured_theme,
+            )
+            self.theme = "textual-dark"
+
         # 3. Open database.
         self._db = Database()
 
