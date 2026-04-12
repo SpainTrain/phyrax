@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import json
+import stat
+import textwrap
+from pathlib import Path
+
 import pytest
 
 from phyrax.bundler import (
     apply_bundle_tags,
+    generate_bundle_rule,
     match_thread_to_bundle,
     sort_bundles,
 )
 from phyrax.config import Bundle, BundleRule, PhyraxConfig
 from phyrax.database import Database
+from phyrax.exceptions import AgentError
+from phyrax.models import MessageDetail
 from tests.fixtures.maildir_builder import MaildirFixture
 
 # ---------------------------------------------------------------------------
@@ -581,3 +589,100 @@ def test_apply_bundle_tags_does_not_remove_existing_tags(
     assert "alerts" in thread.tags
     # New tag added
     assert "monitoring" in thread.tags
+
+
+# ---------------------------------------------------------------------------
+# generate_bundle_rule — agent output validation
+# ---------------------------------------------------------------------------
+
+
+def _make_agent_script(tmp_path: Path, output: str) -> str:
+    """Return the path to a shell script that prints *output* and exits 0."""
+    script = tmp_path / "fake_agent.sh"
+    # Use printf to avoid trailing-newline surprises with echo.
+    escaped = output.replace("'", "'\\''")
+    script.write_text(
+        textwrap.dedent(f"""\
+            #!/usr/bin/env sh
+            printf '%s' '{escaped}'
+        """)
+    )
+    script.chmod(script.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    return str(script)
+
+
+def _make_message(**overrides: object) -> MessageDetail:
+    defaults: dict[str, object] = dict(
+        message_id="<test@fixture>",
+        thread_id="thread1",
+        from_="sender@example.com",
+        to=["me@example.com"],
+        cc=[],
+        date=1_735_732_800,
+        subject="Test Subject",
+        headers={},
+        body_plain="Hello world",
+        body_html=None,
+        tags=frozenset({"inbox", "unread"}),
+        attachments=[],
+    )
+    defaults.update(overrides)
+    return MessageDetail(**defaults)  # type: ignore[arg-type]
+
+
+def _make_config(agent_command: str) -> PhyraxConfig:
+    return PhyraxConfig(
+        ai=PhyraxConfig.model_fields["ai"].default.__class__(agent_command=agent_command)
+    )
+
+
+def test_generate_bundle_rule_returns_bundle_rule(tmp_path: Path) -> None:
+    """generate_bundle_rule returns a BundleRule when agent emits valid JSON."""
+    payload = json.dumps({"field": "from", "operator": "contains", "value": "newsletters"})
+    script = _make_agent_script(tmp_path, payload)
+    config = PhyraxConfig(
+        ai=PhyraxConfig.model_fields["ai"].default.__class__(agent_command=f"{script} %s")
+    )
+    message = _make_message()
+    rule = generate_bundle_rule(message, "looks like a newsletter", config)
+    assert isinstance(rule, BundleRule)
+    assert rule.field == "from"
+    assert rule.operator == "contains"
+    assert rule.value == "newsletters"
+
+
+def test_generate_bundle_rule_bad_json_raises_agent_error(tmp_path: Path) -> None:
+    """generate_bundle_rule raises AgentError when agent stdout is not valid JSON."""
+    script = _make_agent_script(tmp_path, "Sorry, I cannot help with that.")
+    config = PhyraxConfig(
+        ai=PhyraxConfig.model_fields["ai"].default.__class__(agent_command=f"{script} %s")
+    )
+    message = _make_message()
+    with pytest.raises(AgentError, match="Could not parse bundle rule"):
+        generate_bundle_rule(message, "some description", config)
+
+
+def test_generate_bundle_rule_invalid_schema_raises_agent_error(tmp_path: Path) -> None:
+    """generate_bundle_rule raises AgentError when JSON has an unknown operator."""
+    payload = json.dumps({"field": "from", "operator": "startswith", "value": "foo"})
+    script = _make_agent_script(tmp_path, payload)
+    config = PhyraxConfig(
+        ai=PhyraxConfig.model_fields["ai"].default.__class__(agent_command=f"{script} %s")
+    )
+    message = _make_message()
+    with pytest.raises(AgentError, match="Could not parse bundle rule"):
+        generate_bundle_rule(message, "some description", config)
+
+
+def test_generate_bundle_rule_extra_fields_raises_agent_error(tmp_path: Path) -> None:
+    """generate_bundle_rule raises AgentError when JSON has unexpected extra keys."""
+    payload = json.dumps(
+        {"field": "from", "operator": "contains", "value": "foo", "surprise": "bad"}
+    )
+    script = _make_agent_script(tmp_path, payload)
+    config = PhyraxConfig(
+        ai=PhyraxConfig.model_fields["ai"].default.__class__(agent_command=f"{script} %s")
+    )
+    message = _make_message()
+    with pytest.raises(AgentError, match="Could not parse bundle rule"):
+        generate_bundle_rule(message, "some description", config)

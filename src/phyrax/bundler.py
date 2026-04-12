@@ -7,9 +7,11 @@ side-effect-free — all mutations (tagging, config writes) are handled by calle
 
 from __future__ import annotations
 
-import json
 import re
 
+from pydantic import ValidationError
+
+from phyrax.agent_schemas import BundleRuleResponse
 from phyrax.config import Bundle, BundleRule, PhyraxConfig
 from phyrax.database import Database
 from phyrax.exceptions import AgentError
@@ -115,9 +117,14 @@ def generate_bundle_rule(
         prompt_path.unlink(missing_ok=True)
 
     try:
-        data = json.loads(result.stdout.strip())
-        return BundleRule(**data)
-    except Exception as exc:
+        response = BundleRuleResponse.model_validate_json(result.stdout.strip())
+    except (ValidationError, ValueError) as exc:
         raise AgentError(
             f"Could not parse bundle rule from agent output: {result.stdout!r}"
         ) from exc
+
+    return BundleRule(
+        field=response.field,
+        operator=response.operator,
+        value=response.value,
+    )
