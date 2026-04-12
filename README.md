@@ -102,6 +102,26 @@ uv run mypy src/phyrax/
 
 `phr --demo` creates an isolated temp directory with synthetic emails and runs the full FTUX wizard — safe for iterating on the TUI without touching your real mailbox.
 
+### Developer Workflow (CSS hot-reload)
+
+When iterating on TUI layout or widget styles, use the Textual devtools pair instead of `uv run phr`:
+
+```bash
+# Terminal 1 — devtools console (receives log output and widget events)
+./scripts/dev_console.sh
+
+# Terminal 2 — app in dev mode against a fixture mailbox
+./scripts/dev.sh
+```
+
+`dev.sh` launches `phr` via `textual run --dev` pointed at an isolated fixture mailbox — no real email touched. Any edit to a `src/phyrax/**/*.tcss` file hot-reloads the running TUI instantly without a restart.
+
+`self.log(...)` calls inside any Textual widget stream into the console pane in Terminal 1. Pass filter flags to the console to reduce noise (e.g. `./scripts/dev_console.sh -x SYSTEM -x EVENT`).
+
+For logic, navigation, or keybinding bugs that do not involve CSS changes, use `scripts/tui_harness.sh` instead — it runs plain `uv run phr` with no devtools overhead, giving deterministic snapshots suitable for CI comparison.
+
+See the [Textual devtools guide](https://textual.textualize.io/guide/devtools/) for full documentation.
+
 ## Further Reading
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system design, data flow, agent security model
