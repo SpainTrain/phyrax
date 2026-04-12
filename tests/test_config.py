@@ -176,6 +176,21 @@ def test_bundle_rule_contains_with_value_valid() -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_display_theme_roundtrips(tmp_config_dir: Path) -> None:
+    path = _config_path(tmp_config_dir)
+    cfg = PhyraxConfig()
+    cfg.display.theme = "nord"
+    cfg.save(path)
+    reloaded = PhyraxConfig.load(path)
+    assert reloaded.display.theme == "nord"
+
+
+def test_display_theme_default(tmp_path: Path) -> None:
+    path = tmp_path / "nonexistent" / "config.json"
+    cfg = PhyraxConfig.load(path)
+    assert cfg.display.theme == "textual-dark"
+
+
 def test_default_keys_present(tmp_config_dir: Path) -> None:
     path = _config_path(tmp_config_dir)
     cfg = PhyraxConfig.load(path)
